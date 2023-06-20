@@ -1,0 +1,900 @@
+---
+title: "DSC 630 Milestones 2-4"
+author: "Taylor Callahan"
+date: '2023-05-13'
+output: 
+  pdf_document: 
+    highlight: zenburn
+---
+
+# Milestone 2
+
+## Introduction
+
+Both at the onset of the COVID-19 pandemic, and into our current day, drastic changes in lifestyle, economics, social life, politics, and more has impacted overall well-being. While these impacts span the globe, for the purpose of this study, we will be narrowing our focus on households within the United States. The main goal of this study is to examine mental health indicators along with access to mental health resources among differing genders, ages, and states to determine if disparities exist. With both mental health and public health and safety being growing national concerns—with “the Centers for Disease Control and Prevention (CDC) report(ing) a 33% increase in suicide in the United States from 1999 through 2017, while suicide is decreasing elsewhere in the world” (Plakun 2020, p. 53)—this analysis seeks to identify areas of growth to address the current crisis and more adequately prepare for future crises, whether they be pandemics or of another kind. National and local governments, along with public health entities, have a vested interest in addressing the growing mental health crisis and adequately preparing access to resources for future pandemics. A decline in mental health across the nation does not simply impact individual households, but it carries with it substantial downstream effects that contribute to the economic and political state of the country. 
+
+To perform this analysis, public government data was accessed on data.gov under the U.S. Department of Health & Human Services and published by the Center for Disease Control and Prevention. The U.S. Census Bureau, in collaboration with five federal agencies, launched the Household Pulse Survey to produce data on the social and economic impacts of COVID-19 on American households (U.S. Census Bureau, National Center for Health Statistics, 2020). Given that the initial collection of this data was to gauge the impact of the pandemic on several factors, including mental well-being and demographic information which was collected on individuals, this data will serve as a catalyst for answering our question of interest. 
+
+## Proposal
+
+Having established the goal of this study, interest lies in the relationship between mental health indicators and demographic and geographical indicators such as age, gender, ethnicity, and state. Framing the goals of this analysis as predictive in nature help to inform modeling and evaluation selection. In order to determine how strong of a correlation exists between the various features of interest and our outcome, we will examine separate models for various combinations of features to determine which combination leads to the greatest predictive accuracy. Given that groupings within our features are categorical, models of interest include K-Nearest Neighbor, Decision Tree, and Random Forest. Each of the chosen models utilize supervised learning, in which our data does have labeled responses. Further, the models of interest can all be used for dropping variables that do not strongly impact the model outcome. Therefore, chosen models will be useful in determining which groups have the greatest impact on mental health resource access. Accuracy will be examined as an initial metric of interest, with Matthew’s correlation coefficient and confusion matrices being examined as additional points of interest. With these results, we would hope to uncover a deeper understanding of disparities, if any, that exist concerning mental health and access to mental health resources. 
+
+Although estimates were weighed to adjust for non-response and to match Census Bureau estimates of the population by age, gender, race and ethnicity, and educational attainment (U.S. Census Bureau, National Center for Health Statistics, 2020), the data collected did come from a voluntary survey, which could present the risk of biased results. Individuals who respond to surveys are often on either extreme end, either feeling strongly in the negative or strongly in the positive sphere of the topic of concern. Therefore, this risk should be considered throughout the analysis and outliers should be examined and considered. Given that this risk was considered in the collection of this data and the U.S. population is accurately represented, it is likely that this risk will be mitigated. Quota sampling was utilized in the collection of this data in an attempt to allow the data to be most representative of the overall U.S. population. Quota sampling relies on a non-random sample of the population with pre-determined percentages to match the overall population. This ensures that the sample represents the actual population. 
+
+Along with potential data collection concerns, ethical implications must be considered in the examination of this data. One ethical concern lies in the data collection process, in which exact questions asked to participants is not published. In data collection, especially in the format of surveys, it is instrumental to remain neutral and unbiased and to not allow personal opinions to interfere with the phrasing of questions. There is also the issue of convenience sampling, where sampled individuals were only selected from those in the Census Bureau Master Address File. Along with potential issues with data collection, issues could arise with the nature of the data and modeling. Being that this data analyzes mental health concerns, data privacy is important in the sharing of the study results. Although personal identifiable information was left out of the published data, results should be made publicly available for those individuals who contributed to the underlying data to have full transparency of how their personal information was used in contributing to this study.
+
+Throughout this analysis, one of the biggest challenges that may present is the inaccurate or unstructured nature of data once data exploration, transformation, and cleaning is performed. Much of this risk is mitigated by selecting well-documented data from a trustworthy entity; however, given that the data was collected from survey results, the risk does exist and should be considered. If data is determined to be unfit for addressing the particular topic of interest of determining demographic and geographic discrepancies with mental health care, the plan exists for the topic of the study to shift to examining mental health indicators before and during COVID-19 to examine how COVID-19 has impacted mental health. If examining this secondary topic is necessary, additional data may need to be accessed to look at mental health prior to 2020. If this plan cannot be pursued due to inconsistencies or inaccurate data, more well-structured data will be accessed to address either of the presented topics and to streamline the data exploration, transformation, and cleaning process. 
+	
+With the initial problem statement identified and data accessed to respond to this problem, the data exploration, cleaning, modeling, and evaluation can continue. Risks, challenges, and ethical implications have been identified and may continue to arise during this study and multiple plans have been identified to stay on track for responding to these questions of interest. 
+
+# Milestone 3
+
+## Preliminary Analysis
+
+Before building and evaluating any models for analysis, an exploration of the data must be concluded to understand the scope, nature, and pitfalls of the chosen data. This initial exploratory analysis will further help to inform modeling decisions and eliminate future risk. 
+
+Upon initial observation, four indicators were identified for understanding mental health, which include: (1) “Took Prescription Medication for Mental Health, Last 4 Weeks”, (2) “Received Counseling or Therapy, Last 4 Weeks”, (3) “Took Prescription Medication for Mental Health And/Or Received Counseling or Therapy, Last 4 Weeks” and (4) “Needed Counseling or Therapy But Did Not Get It, Last 4 Weeks”. For each of these indicators, a percentage is given for those who answered “Yes” within each of the identified groups. Of these indicators, those labeled as 3 and 4 will be chosen for this analysis. With these two indicators, we will be able to determine the percentage of individuals, by group, who actively seek treatment for mental health concerns, along with those who do not have access to mental health resources and yet need them. Groups chosen for analysis include gender, state, age, and race/ethnicity. Represented genders include male and female, represented ages include 18-29, 30-39, 40-49, 50-59, 60-69, 70-79, and 80+, represented race/ethnicities include Hispanic or Latino, Non-Hispanic black, Non-Hispanic multiple races, Non-Hispanic white, and Non-Hispanic Asian. All 50 states are represented, along with the District of Columbia. Given that the main goal of this analysis is to determine if disparities exist between groups for access to mental health resources, the data appears sufficient for this analysis. 
+
+To help draw out patterns and better understand how to approach our modeling, helpful visualizations can be built. Given that the data of interest is mainly categorical in nature, we are interested in looking at aggregate results across categories. Helpful visualizations for these results would include bar graphs representing average responses across each identified group of interest. To first help identify which age groups, states, gender, and race/ethnicity most often accesses mental health resources (medication or counseling), we will compare averages across each of the subgroups of the categories. 
+
+![](Fig1)
+
+To begin examining differences across subgroups, Figure 1 displays the average percentage of individuals who took prescription medication for mental health and/or received counseling or therapy across genders and race/ethnicity.
+
+![](Fig2)
+
+Figure 2 displays these same results across state, with states with a lower than average mean highlighted
+
+![](Fig3)
+
+The final figure, Figure 3, displays these results across age groups. 
+
+As is evident by the above visualizations, bar graphs are a great tool for understanding differences in mental health access across the categories of interest. To help draw a connection between the need for mental health resources and available access, we will build the same bar charts for our second indicator, where individuals needed counseling or therapy but did not get it. If we see that groups which had a lower percentage of individuals who used mental health resources have a high percentage of individuals who needed them and could not access them, we may be able to draw a connection between particular subgroups and access to resources. 
+
+![](Fig4)
+
+Further examining differences across subgroups, Figure 4 displays the average percentage of individuals who needed counseling or therapy but did not get it across genders and race/ethnicity.
+
+![](Fig5)
+
+Figure 5 displays these same results across state, with states with a higher than average mean highlighted. 
+
+![](Fig6)
+
+The final figure, Figure 6, displays these results across age groups.
+
+Throughout this visual analysis, some interesting trends have been discovered. For example, while the age group 30-39 years old most often accessed mental health resources, the age group 18-29 years old most often needed access but could not get it. Further, while white individuals (excluding other/multiple races) most often accessed mental health resources, Hispanic or Latino individuals (excluding other/multiple races) most often needed access but could not get it. These trends may suggest discrepancies in access to mental health resources across age groups and race/ethnicities. Therefore, using bar charts for visual analysis has helped to draw out trends prior to modeling.
+
+After initial exploration of the data, it does not appear that the data, questions, or modeling choices need to be re-evaluated. Although some data cleaning is necessary to allow for proper modeling, the chosen data does not need to be supplemented or altered to produce the desired results. Further, it is still reasonable to answer the question of disparities across groups related to mental health access. K-Nearest Neighbor, Decision Tree, and Random Forest models are still viable options for modeling, given the categorical nature of the data. There is a particular interest in Decision Tree modeling due to the nature of a Decision Tree model to drop variables that do not have a strong enough impact on the result. This may help to draw out relationships between groups and access to mental health resources. It is worth noting that all chosen models utilize supervised learning, which fits our data given that results have already been recorded across each subgroup. 
+	
+One change that must be made is for model evaluation metrics. Upon initial proposal, the main evaluation metric chosen was accuracy due to the assumption that the problem was a classification problem. However, given that our outcome is a numeric percentage and is a regression problem, we should calculate results of predicted values vs. true values. Therefore, to help identify the best model, we will utilize root mean squared error to analyze model results. Aside from a change of our evaluation metrics, the analysis will continue as initially proposed. 
+
+
+# Milestone 4
+
+## Import Data and Packages
+
+```{r import-packages, warning = FALSE, message = FALSE}
+# import packages
+library(dplyr)
+library(tidyr)
+library(mltools)
+library(data.table)
+library(FNN)
+library(caret)
+library(rpart)    
+library(rpart.plot)
+```
+
+```{r import-data, warning = FALSE, message = FALSE}
+# import data
+df <- read.csv("covid_mental_health.csv")
+```
+
+## Data Transformation and Cleaning
+
+Before we being modeling, we are going to subset our data to select only the variables and indicators we are interested in examining. Two indicators have been chosen for analysis, and are as follows:  
+  
+* Took Prescription Medication for Mental Health And/Or Received Counseling or Therapy, Last 4 Weeks  
+* Needed Counseling or Therapy But Did Not Get It, Last 4 Weeks  
+
+By examining these two indicators, we will establish an understanding of who is getting the mental health help they need and who is not getting the mental health help they need. This will help us to draw out the underlying question of this analysis, which is whether disparities exist among who has access to mental health resources. We will examine gender, age, state, and ethnicity to determine if any of these factors impact mental health resource access. 
+
+Before subsetting our data with the chosen indicators and groups, we will first handle missing data. Since we are interested in the "Value" feature, which is the percentage of individuals within the group (age, state, etc.) that responded 'Yes' to the given indicator, we cannot have NAs for that percentage. There was one phase of the trial where no data was collected, and therefore those NAs will be removed. 
+
+```{r handle_na_data, warning = FALSE, message = FALSE}
+# drop NA values for percentage (outcome) feature
+df <- df %>% drop_na(Value)
+```
+
+```{r ind, warning = FALSE, message = FALSE}
+# the following variables will be used for subsetting data
+
+# first indicator to be considered
+ind3 = paste("Took Prescription Medication for Mental Health ",
+                    "And/Or Received Counseling or Therapy, Last 4 Weeks",
+                    sep = "")
+
+# second indicator to be considered
+ind4 = paste("Needed Counseling or Therapy But Did Not Get It",
+                    ", Last 4 Weeks",
+                    sep = "")
+```
+
+```{r new_df, warning = FALSE, message = FALSE}
+# indicator 3 dataset, only considering gender, age, state, and ethnicity
+df3 <- df[which(df$Indicator == ind3 & 
+                  (df$Group == "By Gender" | 
+                     df$Group == "By Age" | 
+                     df$Group == "By State" | 
+                     df$Group == "By Race/Hispanic ethnicity")),]
+
+# indicator 4 dataset, only considering gender, age, state, and ethnicity
+df4 <- df[which(df$Indicator == ind4 & 
+                  (df$Group == "By Gender" | 
+                     df$Group == "By Age" | 
+                     df$Group == "By State" | 
+                     df$Group == "By Race/Hispanic ethnicity")),]
+```
+
+Another feature that we will keep for analysis is the time period in which the data was collected. All data was collected in 2020 or 2021, but was split between 8 time periods labeled 13-25. Looking at this feature may help to analyze improvements over time in access to mental health resources, along with how COVID-19 impacted that access. 
+
+In the two datasets for our chosen indicators, we are going to drop all features that are not being used for analysis. 
+
+```{r drop-columns, warning  = FALSE, message = FALSE}
+# keeping only columns being used for analysis
+df3 <- subset(df3, select = c("Group", "Subgroup", "Time.Period", "Value"))
+df4 <- subset(df4, select = c("Group", "Subgroup", "Time.Period", "Value"))
+```
+
+Given the unique structure of the data being used, where each group is directly related to their subgroup, and the value is related to only one subgroup at a time, we cannot split up our features to use one-hot encoding. However, we similarly do not want to assign each of our categorical features with a number and assign an arbitrary ordering. Therefore, the best way to handle the numerical conversion of our data is to separate each group into it's own dataframe. In doing this, we will build a model on each feature and determine which age group, gender, ethnicity, and state has the highest percentage of individuals who need access to mental health resources, along with the age group, gender, ethnicity, and state with the least access available to determine where the disparity lies. 
+
+After splitting our variables into their distinct dataframe, one-hot encoding will be performed on each. Thus, for each model that is fit, there will be 8 distinct datasets ran through the algorithm. 
+
+We will begin by separating our groups, performing one-hot encoding, and splitting the data into train and test sets. 
+
+```{r separate-data, warning = FALSE, message = FALSE}
+# builds 4 dataframes for each group for each indicator
+# each will be modeled
+
+# the variable to undergo one-hot encoding must also be converted to a
+# factor first
+
+df3_gender <- df3[which(df3$Group == "By Gender"),]
+df3_gender$Subgroup <- as.factor(df3_gender$Subgroup)
+df3_age <- df3[which(df3$Group == "By Age"),]
+df3_age$Subgroup <- as.factor(df3_age$Subgroup)
+df3_race <- df3[which(df3$Group == "By Race/Hispanic ethnicity"),]
+df3_race$Subgroup <- as.factor(df3_race$Subgroup)
+df3_state <- df3[which(df3$Group == "By State"),]
+df3_state$Subgroup <- as.factor(df3_state$Subgroup)
+
+df4_gender <- df4[which(df4$Group == "By Gender"),]
+df4_gender$Subgroup <- as.factor(df4_gender$Subgroup)
+df4_age <- df4[which(df4$Group == "By Age"),]
+df4_age$Subgroup <- as.factor(df4_age$Subgroup)
+df4_race <- df4[which(df4$Group == "By Race/Hispanic ethnicity"),]
+df4_race$Subgroup <- as.factor(df4_race$Subgroup)
+df4_state <- df4[which(df4$Group == "By State"),]
+df4_state$Subgroup <- as.factor(df4_state$Subgroup)
+```
+
+```{r one-hot-encoding, warning = FALSE, message = FALSE}
+# one_hot() from the mltools package is used to convert factored variables into
+# dummy variables
+df3_gender <- one_hot(as.data.table(df3_gender))
+df3_age <- one_hot(as.data.table(df3_age))
+df3_race <- one_hot(as.data.table(df3_race))
+df3_state <- one_hot(as.data.table(df3_state))
+
+df4_gender <- one_hot(as.data.table(df4_gender))
+df4_age <- one_hot(as.data.table(df4_age))
+df4_race <- one_hot(as.data.table(df4_race))
+df4_state <- one_hot(as.data.table(df4_state))
+
+# the name of the dataset tells what group, so we no longer need the group
+# column
+df3_gender <- df3_gender[,-1]
+df3_age <- df3_age[,-1]
+df3_race <- df3_race[,-1]
+df3_state <- df3_state[,-1]
+
+df4_gender <- df4_gender[,-1]
+df4_age <- df4_age[,-1]
+df4_race <- df4_race[,-1]
+df4_state <- df4_state[,-1]
+```
+
+```{r train-test, warning = FALSE, message = FALSE}
+# randomization is going to be taking place from this point forward, so
+# seed is being set for reproducibility
+set.seed(7)
+
+# 70% of the data in each dataframe is for training and 30% is for testing
+# using sample() to select a random sample for each
+sample_df3_gender <- sample(c(TRUE, FALSE), nrow(df3_gender), replace = TRUE,
+                 prob = c(0.7, 0.3))
+train_df3_gender <- df3_gender[sample_df3_gender, ]
+test_df3_gender <- df3_gender[!sample_df3_gender, ]
+
+sample_df3_age <- sample(c(TRUE, FALSE), nrow(df3_age), replace = TRUE,
+                 prob = c(0.7, 0.3))
+train_df3_age <- df3_age[sample_df3_age, ]
+test_df3_age <- df3_age[!sample_df3_age, ]
+
+sample_df3_state <- sample(c(TRUE, FALSE), nrow(df3_state), replace = TRUE,
+                 prob = c(0.7, 0.3))
+train_df3_state <- df3_state[sample_df3_state, ]
+test_df3_state <- df3_state[!sample_df3_state, ]
+
+sample_df3_race <- sample(c(TRUE, FALSE), nrow(df3_race), replace = TRUE,
+                 prob = c(0.7, 0.3))
+train_df3_race <- df3_race[sample_df3_race, ]
+test_df3_race <- df3_race[!sample_df3_race, ]
+
+sample_df4_gender <- sample(c(TRUE, FALSE), nrow(df4_gender), replace = TRUE,
+                 prob = c(0.7, 0.3))
+train_df4_gender <- df4_gender[sample_df4_gender, ]
+test_df4_gender <- df4_gender[!sample_df4_gender, ]
+
+sample_df4_age <- sample(c(TRUE, FALSE), nrow(df4_age), replace = TRUE,
+                 prob = c(0.7, 0.3))
+train_df4_age <- df4_age[sample_df4_age, ]
+test_df4_age <- df4_age[!sample_df4_age, ]
+
+sample_df4_state <- sample(c(TRUE, FALSE), nrow(df4_state), replace = TRUE,
+                 prob = c(0.7, 0.3))
+train_df4_state <- df4_state[sample_df4_state, ]
+test_df4_state <- df4_state[!sample_df4_state, ]
+
+sample_df4_race <- sample(c(TRUE, FALSE), nrow(df4_race), replace = TRUE,
+                 prob = c(0.7, 0.3))
+train_df4_race <- df4_race[sample_df4_race, ]
+test_df4_race <- df4_race[!sample_df4_race, ]
+```
+
+Now that we have 4 datasets for each indicator (one for each feature), and we have performed one-hot encoding, we can begin the model building process. 
+
+## Model Building
+
+Given that we have a numeric outcome and categorical features, we are not going to utilize linear or logistic regression for modeling. Given that many models will be fit in this analysis, which would take up space and time in the report, K-Nearest Neighbor and Decision Tree models will be built for only one of the 8 datasets being utilized in this analysis. RMSE's will be calculated for each of these two models. The model which best fits the data will then be chosen for a complete analysis of all 8 datasets. 
+
+### Model Comparison   
+  
+We will be utilizing the state dataset for indicator #3 (Took Prescription Medication for Mental Health And/Or Received Counseling or Therapy, Last 4 Weeks) for model comparison. Based on the results of these models on this single dataset, a model will be chosen for a complete analysis.
+
+The below functions will help to determine the best K for fitting a KNN model. These functions can be re-used in final analysis if the KNN model is chosen. 
+
+```{r find-best-k, warning = FALSE, message = FALSE}
+# calculate RMSE given actual and predicted values
+rmse = function(actual, predicted) {
+  sqrt(mean((actual - predicted) ^ 2))
+}
+
+# takes training and test set as parameters and finds rmse for each of the
+# chosen k values
+make_knn_pred = function(k = 1, training, predicting) {
+  # make predictions
+  pred = FNN::knn.reg(train = subset(training, select = -c(Value)), 
+                      test = subset(predicting, select = -c(Value)), 
+                      y = training$Value, k = k)$pred
+  act = predicting$Value   # test outcomes
+  rmse(predicted = pred, actual = act)  # calculates rmse
+}
+
+# define values of k to evaluate
+k = c(1, 5, 10, 25, 50)
+```
+
+The following two chunks of code will select the best K for the KNN model and print the results to the screen in tabular form. 
+
+```{r find-k_test, warning = FALSE, message = FALSE}
+# get train RMSEs
+knn_trn_rmse = sapply(k, make_knn_pred, 
+                      training = train_df3_state, 
+                      predicting = train_df3_state)
+# get test RMSEs
+knn_tst_rmse = sapply(k, make_knn_pred, 
+                      training = train_df3_state, 
+                      predicting = test_df3_state)
+
+# determine the best k for KNN
+best_k = k[which.min(knn_tst_rmse)]
+
+# find overfitting, underfitting, and best k
+fit_status = ifelse(k < best_k, "Over", ifelse(k == best_k, "Best", "Under"))
+```
+
+```{r show_results_test, warning = FALSE, message = FALSE}
+# summarize results
+knn_results = data.frame(
+  k,
+  round(knn_trn_rmse, 2),
+  round(knn_tst_rmse, 2),
+  fit_status
+)
+colnames(knn_results) = c("k", "Train RMSE", "Test RMSE", "Fit")
+
+# display results
+knitr::kable(knn_results, escape = FALSE, booktabs = TRUE)
+
+```
+
+With the K value chosen to be 5, we will fit the model and calculate the RMSE. 
+
+```{r fit-test-model, warning = FALSE, message = FALSE}
+# fit model with chosen k and "Value" as outcome
+model <- train(
+  Value~., data = train_df3_state, method = "knn",
+  trControl = trainControl("cv", number = 5),
+  preProcess = c("center", "scale")
+  )
+
+# make predictions based on test data and model fit
+predictions <- model %>% predict(test_df3_state)
+
+# calculate RMSE and print to screen
+RMSE(predictions, test_df3_state$Value)
+```
+
+For a KNN model, we see a RMSE of 2.447. 
+
+Using the same dataset which was fit to a KNN model above, we will not test out a decision tree model for the data. 
+
+Before fitting a decision tree model, we need to determine the best min and max depth for splitting. The following code chunks test different hyperparameters for the given model to choose the best fit. 
+
+```{r tuning-dt, warning = FALSE, message = FALSE}
+# create test values for a grid search
+hyper_grid <- expand.grid(
+  minsplit = seq(5, 20, 1),
+  maxdepth = seq(8, 15, 1)
+)
+
+# create empty list to hold tested models
+models <- list()
+
+# loops through options in grid search to test models
+for (i in 1:nrow(hyper_grid)) {
+  
+  # get minsplit, maxdepth values at row i
+  minsplit <- hyper_grid$minsplit[i]
+  maxdepth <- hyper_grid$maxdepth[i]
+
+  # train a model and store in the list
+  models[[i]] <- rpart(
+    formula = Value ~ .,
+    data = train_df3_state,
+    method = "anova",
+    control = list(minsplit = minsplit, maxdepth = maxdepth)
+    )
+}
+```
+
+```{r find-optimal-tree, warning = FALSE, message = FALSE}
+# function to get optimal cp
+get_cp <- function(x) {
+  min <- which.min(x$cptable[, "xerror"])
+  cp <- x$cptable[min, "CP"] 
+}
+
+# function to get minimum error
+get_min_error <- function(x) {
+  min <- which.min(x$cptable[, "xerror"])
+  xerror <- x$cptable[min, "xerror"] 
+}
+
+# take parameters from grid search and pair them with their rmse
+# order by lowest to greatest. First row will be optimal selections
+hyper_grid %>%
+  mutate(
+    cp = purrr::map_dbl(models, get_cp),
+    error = purrr::map_dbl(models, get_min_error)
+    ) %>%
+  arrange(error) %>%
+  top_n(-5, wt = error)
+```
+
+With an optimal minimum split of 14 and maximum depth of 9, we will fit our decision tree model. 
+
+```{r optimal-tree, warning = FALSE, message = FALSE}
+# fit optimal tree based on above choices
+optimal_tree <- rpart(
+    formula = Value ~ .,
+    data    = train_df3_state,
+    method  = "anova",
+    control = list(minsplit = 7, maxdepth = 12, cp = 0.01)
+    )
+
+# make predictions and print RMSE for the decision tree model
+pred <- predict(optimal_tree, newdata = test_df3_state)
+RMSE(pred = pred, obs = test_df3_state$Value)
+```
+
+With a RMSE of 2.921, the decision tree model performs slightly worse than the KNN model for predicting mental health use. 
+
+```{r plot-tree, warning = FALSE, message = FALSE}
+# show decision tree
+rpart.plot(optimal_tree)
+```
+
+Although KNN had been selected as the model for final analysis, the above plot shows the results of the model fit for using state to predict mental health resource use. It appears that living in Hawaii has the greatest impact on accessing mental health resources, with people being less likely to access mental health resources in Hawaii. It also appears that more people accessed mental health resources in later time periods. Finally, New York, Texas, and New Jersey have large impacts on access to mental health resources, with those living in New Jersey having the highest percentage of individuals accessing mental health resources. 
+
+In the next section, we will fit a KNN model for all 8 chosen datasets to see which of age group, state, race, or gender has the highest predictive impact on access to mental health resources or lack thereof. 
+
+## K-Nearest Neighbor
+
+Having selected a KNN model as being best fit to our data, we will now fit 8 models, one for each of the chosen indicators and features. 
+
+### Indicator 3
+
+We will begin by examining who is most likely to access mental health resources based on age, gender, state, and race. The indicator for testing this is "Took Prescription Medication for Mental Health And/Or Received Counseling or Therapy, Last 4 Weeks".
+
+#### State \hfill\break
+\
+The KNN model for predicting mental health resource access based on state was fit above during model selection. The RMSE for this model was 2.447. 
+
+#### Gender \hfill\break
+\
+For our next model, we will test how gender impacts access to mental health resources.
+
+```{r find-k1, warning = FALSE, message = FALSE}
+# define values of k to evaluate
+# k needs to be less than the number of observations (8 obs in test set)
+k = c(2, 3, 4, 5, 6)
+
+# get train RMSEs
+knn_trn_rmse = sapply(k, make_knn_pred, 
+                      training = train_df3_gender, 
+                      predicting = train_df3_gender)
+# get test RMSEs
+knn_tst_rmse = sapply(k, make_knn_pred, 
+                      training = train_df3_gender, 
+                      predicting = test_df3_gender)
+
+# determine the best k for KNN
+best_k = k[which.min(knn_tst_rmse)]
+
+# find overfitting, underfitting, and best k
+fit_status = ifelse(k < best_k, "Over", ifelse(k == best_k, "Best", "Under"))
+```
+
+```{r show_results1, warning = FALSE, message = FALSE}
+# summarize results
+knn_results = data.frame(
+  k,
+  round(knn_trn_rmse, 2),
+  round(knn_tst_rmse, 2),
+  fit_status
+)
+colnames(knn_results) = c("k", "Train RMSE", "Test RMSE", "Fit")
+
+# display results
+knitr::kable(knn_results, escape = FALSE, booktabs = TRUE)
+```
+
+With the K value chosen to be 2, we will fit the model and calculate the RMSE. 
+
+```{r fit-first-model1, warning = FALSE, message = FALSE}
+# fit model with chosen k and "Value" as outcome
+model <- train(
+  Value~., data = train_df3_gender, method = "knn",
+  trControl = trainControl("cv", number = 2),
+  preProcess = c("center", "scale")
+  )
+
+# make predictions based on test data and model fit
+predictions <- model %>% predict(test_df3_gender)
+
+# calculate RMSE and print to screen
+RMSE(predictions, test_df3_gender$Value)
+```
+
+The KNN model for predicting mental health resource access based on gender produced a RMSE of 0.866.
+
+#### Race/Ethnicity \hfill\break
+\
+For our next model, we will test how race and ethnicity impact access to mental health resources.
+
+```{r find-k2, warning = FALSE, message = FALSE}
+# define values of k to evaluate
+# k needs to be less than the number of observations (17 obs in test set)
+k = c(2, 3, 5, 10, 15)
+
+# get train RMSEs
+knn_trn_rmse = sapply(k, make_knn_pred, 
+                      training = train_df3_race, 
+                      predicting = train_df3_race)
+# get test RMSEs
+knn_tst_rmse = sapply(k, make_knn_pred, 
+                      training = train_df3_race, 
+                      predicting = test_df3_race)
+
+# determine the best k for KNN
+best_k = k[which.min(knn_tst_rmse)]
+
+# find overfitting, underfitting, and best k
+fit_status = ifelse(k < best_k, "Over", ifelse(k == best_k, "Best", "Under"))
+```
+
+```{r show_results2, warning = FALSE, message = FALSE}
+# summarize results
+knn_results = data.frame(
+  k,
+  round(knn_trn_rmse, 2),
+  round(knn_tst_rmse, 2),
+  fit_status
+)
+colnames(knn_results) = c("k", "Train RMSE", "Test RMSE", "Fit")
+
+# display results
+knitr::kable(knn_results, escape = FALSE, booktabs = TRUE)
+```
+
+With the K value chosen to be 2, we will fit the model and calculate the RMSE. 
+
+```{r fit-second-model1, warning = FALSE, message = FALSE}
+# fit model with chosen k and "Value" as outcome
+model <- train(
+  Value~., data = train_df3_race, method = "knn",
+  trControl = trainControl("cv", number = 2),
+  preProcess = c("center", "scale")
+  )
+
+# make predictions based on test data and model fit
+predictions <- model %>% predict(test_df3_race)
+
+# calculate RMSE and print to screen
+RMSE(predictions, test_df3_race$Value)
+```
+
+The KNN model for predicting mental health resource access based on race and ethnicity produced a RMSE of 1.347.
+
+#### Age Group \hfill\break
+\
+For our next model and final model for indicator 3, we will test how age group impacts access to mental health resources.
+
+```{r find-k3, warning = FALSE, message = FALSE}
+# define values of k to evaluate
+# k needs to be less than the number of observations (26 obs in test set)
+k = c(2, 5, 10, 15, 25)
+
+# get train RMSEs
+knn_trn_rmse = sapply(k, make_knn_pred, 
+                      training = train_df3_age, 
+                      predicting = train_df3_age)
+# get test RMSEs
+knn_tst_rmse = sapply(k, make_knn_pred, 
+                      training = train_df3_age, 
+                      predicting = test_df3_age)
+
+# determine the best k for KNN
+best_k = k[which.min(knn_tst_rmse)]
+
+# find overfitting, underfitting, and best k
+fit_status = ifelse(k < best_k, "Over", ifelse(k == best_k, "Best", "Under"))
+```
+
+```{r show_results3, warning = FALSE, message = FALSE}
+# summarize results
+knn_results = data.frame(
+  k,
+  round(knn_trn_rmse, 2),
+  round(knn_tst_rmse, 2),
+  fit_status
+)
+colnames(knn_results) = c("k", "Train RMSE", "Test RMSE", "Fit")
+
+# display results
+knitr::kable(knn_results, escape = FALSE, booktabs = TRUE)
+```
+
+With the K value chosen to be 25, we will fit the model and calculate the RMSE. 
+
+```{r fit-third-model1, warning = FALSE, message = FALSE}
+# fit model with chosen k and "Value" as outcome
+model <- train(
+  Value~., data = train_df3_age, method = "knn",
+  trControl = trainControl("cv", number = 25),
+  preProcess = c("center", "scale")
+  )
+
+# make predictions based on test data and model fit
+predictions <- model %>% predict(test_df3_age)
+
+# calculate RMSE and print to screen
+RMSE(predictions, test_df3_age$Value)
+```
+
+The KNN model for predicting mental health resource access based on age group produced a RMSE of 1.452.
+
+#### Indicator 3 Model Evaluation
+
+```{r results3, warning = FALSE, message = FALSE}
+# put results in dataframe
+results3 <- data.frame (Feature  = c("Gender", "State", "Race/Ethnicity", 
+                               "Age Group"),
+                  KNN_RMSE = c("0.866", "2.447", "1.347", "1.452")
+                  )
+
+# display results in table
+knitr::kable(results3, col.names = gsub("[.]", " ", names(results3)))
+```
+
+Based on the above fitted models and RMSE's, gender has the greatest predictive power for determining if an individual accesses mental health resources, while state has the least predictive power. 
+
+### Indicator 4
+
+We will next examine who is most likely to need access to mental health resources but not be able to access it based on age, gender, state, and race. The indicator for testing this is "Needed Counseling or Therapy But Did Not Get It, Last 4 Weeks".
+
+#### State \hfill\break
+\
+For our first model, we will test how state impacts a lack of access to mental health resources.
+
+```{r find-k4, warning = FALSE, message = FALSE}
+# define values of k to evaluate
+# k needs to be less than the number of observations (207 obs in test set)
+k = c(1, 5, 10, 25, 50)
+
+# get train RMSEs
+knn_trn_rmse = sapply(k, make_knn_pred, 
+                      training = train_df4_state, 
+                      predicting = train_df4_state)
+# get test RMSEs
+knn_tst_rmse = sapply(k, make_knn_pred, 
+                      training = train_df4_state, 
+                      predicting = test_df4_state)
+
+# determine the best k for KNN
+best_k = k[which.min(knn_tst_rmse)]
+
+# find overfitting, underfitting, and best k
+fit_status = ifelse(k < best_k, "Over", ifelse(k == best_k, "Best", "Under"))
+```
+
+```{r show_results4, warning = FALSE, message = FALSE}
+# summarize results
+knn_results = data.frame(
+  k,
+  round(knn_trn_rmse, 2),
+  round(knn_tst_rmse, 2),
+  fit_status
+)
+colnames(knn_results) = c("k", "Train RMSE", "Test RMSE", "Fit")
+
+# display results
+knitr::kable(knn_results, escape = FALSE, booktabs = TRUE)
+```
+
+With the K value chosen to be 5, we will fit the model and calculate the RMSE. 
+
+```{r fit-first-model2, warning = FALSE, message = FALSE}
+# fit model with chosen k and "Value" as outcome
+model <- train(
+  Value~., data = train_df4_state, method = "knn",
+  trControl = trainControl("cv", number = 5),
+  preProcess = c("center", "scale")
+  )
+
+# make predictions based on test data and model fit
+predictions <- model %>% predict(test_df4_state)
+
+# calculate RMSE and print to screen
+RMSE(predictions, test_df4_state$Value)
+```
+
+The KNN model for predicting a lack of mental health resource access based on state produced a RMSE of 1.926.
+
+#### Gender \hfill\break
+\
+For our next model, we will test how gender impacts a lack of access to mental health resources.
+
+```{r find-k5, warning = FALSE, message = FALSE}
+# define values of k to evaluate
+# k needs to be less than the number of observations (8 obs in test set)
+k = c(2, 3, 4, 5, 6)
+
+# get train RMSEs
+knn_trn_rmse = sapply(k, make_knn_pred, 
+                      training = train_df4_gender, 
+                      predicting = train_df4_gender)
+# get test RMSEs
+knn_tst_rmse = sapply(k, make_knn_pred, 
+                      training = train_df4_gender, 
+                      predicting = test_df4_gender)
+
+# determine the best k for KNN
+best_k = k[which.min(knn_tst_rmse)]
+
+# find overfitting, underfitting, and best k
+fit_status = ifelse(k < best_k, "Over", ifelse(k == best_k, "Best", "Under"))
+```
+
+```{r show_results5, warning = FALSE, message = FALSE}
+# summarize results
+knn_results = data.frame(
+  k,
+  round(knn_trn_rmse, 2),
+  round(knn_tst_rmse, 2),
+  fit_status
+)
+colnames(knn_results) = c("k", "Train RMSE", "Test RMSE", "Fit")
+
+# display results
+knitr::kable(knn_results, escape = FALSE, booktabs = TRUE)
+```
+
+With the K value chosen to be 2, we will fit the model and calculate the RMSE. 
+
+```{r fit-second-model2, warning = FALSE, message = FALSE}
+# fit model with chosen k and "Value" as outcome
+model <- train(
+  Value~., data = train_df4_gender, method = "knn",
+  trControl = trainControl("cv", number = 2),
+  preProcess = c("center", "scale")
+  )
+
+# make predictions based on test data and model fit
+predictions <- model %>% predict(test_df4_gender)
+
+# calculate RMSE and print to screen
+RMSE(predictions, test_df4_gender$Value)
+```
+
+The KNN model for predicting a lakc of mental health resource access based on gender produced a RMSE of 0.767.
+
+#### Race/Ethnicity \hfill\break
+\
+For our next model, we will test how race and ethnicity impact a lack of access to mental health resources.
+
+```{r find-k6, warning = FALSE, message = FALSE}
+# define values of k to evaluate
+# k needs to be less than the number of observations (18 obs in test set)
+k = c(2, 3, 5, 10, 15)
+
+# get train RMSEs
+knn_trn_rmse = sapply(k, make_knn_pred, 
+                      training = train_df4_race, 
+                      predicting = train_df4_race)
+# get test RMSEs
+knn_tst_rmse = sapply(k, make_knn_pred, 
+                      training = train_df4_race, 
+                      predicting = test_df4_race)
+
+# determine the best k for KNN
+best_k = k[which.min(knn_tst_rmse)]
+
+# find overfitting, underfitting, and best k
+fit_status = ifelse(k < best_k, "Over", ifelse(k == best_k, "Best", "Under"))
+```
+
+```{r show_results6, warning = FALSE, message = FALSE}
+# summarize results
+knn_results = data.frame(
+  k,
+  round(knn_trn_rmse, 2),
+  round(knn_tst_rmse, 2),
+  fit_status
+)
+colnames(knn_results) = c("k", "Train RMSE", "Test RMSE", "Fit")
+
+# display results
+knitr::kable(knn_results, escape = FALSE, booktabs = TRUE)
+```
+
+With the K value chosen to be 2, we will fit the model and calculate the RMSE. 
+
+```{r fit-third-model2, warning = FALSE, message = FALSE}
+# fit model with chosen k and "Value" as outcome
+model <- train(
+  Value~., data = train_df4_race, method = "knn",
+  trControl = trainControl("cv", number = 2),
+  preProcess = c("center", "scale")
+  )
+
+# make predictions based on test data and model fit
+predictions <- model %>% predict(test_df4_race)
+
+# calculate RMSE and print to screen
+RMSE(predictions, test_df4_race$Value)
+```
+
+The KNN model for predicting a lack of mental health resource access based on race and ethnicity produced a RMSE of 1.318.
+
+#### Age Group \hfill\break
+\
+For our next model and final model for indicator 4, we will test how age group impacts a lack of access to mental health resources.
+
+```{r find-k7, warning = FALSE, message = FALSE}
+# define values of k to evaluate
+# k needs to be less than the number of observations (25 obs in test set)
+k = c(2, 5, 10, 15, 25)
+
+# get train RMSEs
+knn_trn_rmse = sapply(k, make_knn_pred, 
+                      training = train_df4_age, 
+                      predicting = train_df4_age)
+# get test RMSEs
+knn_tst_rmse = sapply(k, make_knn_pred, 
+                      training = train_df4_age, 
+                      predicting = test_df4_age)
+
+# determine the best k for KNN
+best_k = k[which.min(knn_tst_rmse)]
+
+# find overfitting, underfitting, and best k
+fit_status = ifelse(k < best_k, "Over", ifelse(k == best_k, "Best", "Under"))
+```
+
+```{r show_results7, warning = FALSE, message = FALSE}
+# summarize results
+knn_results = data.frame(
+  k,
+  round(knn_trn_rmse, 2),
+  round(knn_tst_rmse, 2),
+  fit_status
+)
+colnames(knn_results) = c("k", "Train RMSE", "Test RMSE", "Fit")
+
+# display results
+knitr::kable(knn_results, escape = FALSE, booktabs = TRUE)
+```
+
+With the K value chosen to be 2, we will fit the model and calculate the RMSE. 
+
+```{r fit-last-model, warning = FALSE, message = FALSE}
+# fit model with chosen k and "Value" as outcome
+model <- train(
+  Value~., data = train_df4_age, method = "knn",
+  trControl = trainControl("cv", number = 2),
+  preProcess = c("center", "scale")
+  )
+
+# make predictions based on test data and model fit
+predictions <- model %>% predict(test_df4_age)
+
+# calculate RMSE and print to screen
+RMSE(predictions, test_df4_age$Value)
+```
+
+The KNN model for predicting a lack of mental health resource access based on age group produced a RMSE of 1.222.
+
+#### Indicator 4 Model Evaluation  
+
+```{r results4, warning = FALSE, message = FALSE}
+# put results in dataframe
+results4 <- data.frame (Feature  = c("Gender", "State", "Race/Ethnicity", 
+                               "Age Group"),
+                  KNN_RMSE = c("0.767", "1.926", "1.318", "1.222")
+                  )
+
+# display results in table
+knitr::kable(results4, col.names = gsub("[.]", " ", names(results3)))
+```
+
+Based on the above fitted models and RMSE's, gender has the greatest predictive power for determining if an individual needs access but cannot access mental health resources, while state has the least predictive power. 
+
+## Conclusion
+
+The goal of this analysis was to examine mental health indicators during and immediately following the onset of the COVID-19 pandemic to determine if access to mental health resources was readily available and to determine where disparities lie. To do this, two models were compared: a decision tree model and a k-nearest neighbor model. Based on the RMSE for each, the final analysis was performed on the KNN model due to it resulting in a smaller RMSE.
+
+Due to the nature of the data, 8 distinct datasets were made for each of the 4 features for each of the 2 chosen indicators. In doing this, a model was fit for each indicator for gender, age group, state, and race/ethnicity. The first indicator was useful for determining which features were most highly correlated with accessing mental health resources. The second indicator was useful for determining which features were most highly correlated with needing and not having access to mental health resources. 
+
+The models suggested that gender is most highly correlated with both access and a lack of access to mental health resources. While this may speak to disparities in access provided to differing genders, it may also speak to differences in how comfortable male and females feel in seeking help when needed. The model also showed a higher RMSE for the model predicting access to mental health resources based on the state and a lower RMSE for the model predicting a lack of access to mental health resources. This suggests that state is more highly correlated with a lack of access to mental health resources than to those who access those resources. Therefore, there may be disparities that exist across states for access to mental health resources. 
+
+There is not a large difference between the RMSE between the indicators for race/ethnicity and age group, suggesting that most people who seek resources receive them. 
+
+In conclusion, the models suggested that gender is most highly correlated with both needing access to mental health resources and with not receiving help needed. The models also suggested that disparities may exist across states for access to resources. These results produce a recommendation for looking more into the differences between genders and why one gender may be dealing with greater mental health concerns than another. It also suggests that particular states should provide greater and more accessible mental health resources. 
+
+## Ethical Implications
+
+One of the biggest ethical implications to be considered in this analysis is the protection of sensitive data. Given that this data presents information regarding intimate mental health issues across the country, it is important for data privacy to be maintained. Given that this data was voluntarily given and personal information was never collected on the individuals, this issue is largely mitigated. 
+
+Another implication of this analysis is the utilization of the results. With the understanding of potential disparities across states, it is important for stakeholders to act on this issue and provide reasonable access to mental health resources. 
+
+# References
+
+Plakun, E. M. (2020). The Mental Health Crisis in America: Recognizing Problems; Working Toward Solutions: Part 1. Defining the Crisis. Journal of Psychiatric Practice, 26(1), 52–57. https://doi.org/10.1097/PRA.0000000000000438 
+
+U.S. Census Bureau. National Center for Health Statistics. Mental Health Care in the Last 4
+Weeks. Center for Disease Control and Prevention, 2020
+
