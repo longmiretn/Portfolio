@@ -1,0 +1,710 @@
+---
+title: "The Impacts of Personality, Demographics, and Country on Mental Health"
+author: "Taylor Callahan"
+date: "11/15/2022"
+output: pdf_document
+---
+
+```{r, warning = FALSE, message = FALSE, echo = FALSE}
+library(countrycode)
+library(dplyr)
+library(stringr)
+library(tidyverse)
+library(kableExtra)
+library(ggplot2)
+library(reshape2)
+library(ggpubr)
+library(qqplotr)
+library(rpart)
+library(rpart.plot)
+
+options(knitr.kable.NA = '')
+
+
+```
+
+```{r, echo = FALSE}
+#             IMPORT AND CLEAN DATA             
+
+depression_data <- read.csv(paste("/Users/longtn18/Desktop/Bellevue ",
+                          "University/Fall 2022/Statistics for Data Science/",
+                          "Final Project/depression.csv", sep = ""), 
+                          sep = "\t")
+countries_data <- read.csv(paste("/Users/longtn18/Desktop/Bellevue ",
+                          "University/Fall 2022/Statistics for Data Science/",
+                          "Final Project/countries.csv", sep = ""))
+WHR_data <- read.csv(paste("/Users/longtn18/Desktop/Bellevue University/Fall",
+                          " 2022/Statistics for Data Science/Final Project/",
+                          "world_happiness_2019.csv", sep = ""))
+```
+
+```{r, echo = FALSE}
+depression_data <- depression_data[, c("Q3A", "TIPI1", "TIPI2", "TIPI3",
+                                       "TIPI4", "TIPI5", "TIPI6", "TIPI7",
+                                       "TIPI8", "TIPI9", "TIPI10", "religion",
+                                       "age", "orientation", "married",
+                                       "source", "country")]
+countries_data <- countries_data[, c("Country", "Pop..Density..per.sq..mi..",
+                                     "Literacy....")]
+WHR_data <- WHR_data[, c("Country.or.region", "Score", "Social.support",
+                         "Perceptions.of.corruption")]
+
+names(countries_data)[names(countries_data) == 
+                        "Pop..Density..per.sq..mi.."] <- "density"
+names(countries_data)[names(countries_data) == 
+                        "Literacy...."] <- "literacy"
+
+names(WHR_data)[names(WHR_data) == 
+                        "Country.or.region"] <- "country"
+names(WHR_data)[names(WHR_data) == 
+                        "Social.support"] <- "support"
+names(WHR_data)[names(WHR_data) == 
+                        "Perceptions.of.corruption"] <- "corruption"
+```
+
+```{r, message = FALSE, warning = FALSE, echo = FALSE}
+for(i in 1:nrow(depression_data)) {       
+  depression_data[i, "country"] <- countrycode(depression_data[i, "country"],
+                                               "iso2c", "country.name")
+}
+```
+
+```{r, echo = FALSE}
+countries <- as.list(unique(depression_data$country))
+countries <- countries[!is.na(countries)]
+
+countries_data <- countries_data %>% 
+  mutate(across(where(is.character), str_trim))
+
+WHR_data <- WHR_data[WHR_data$country %in% countries, ]
+countries_data <- countries_data[countries_data$Country %in% countries, ]
+```
+
+```{r, echo = FALSE}
+full_data <- left_join(depression_data, WHR_data, 
+                       by = c("country" = "country"))
+full_data <- left_join(full_data, countries_data,
+                       by = c("country" = "Country"))
+```
+
+```{r, warning = FALSE, message = FALSE, echo = FALSE}
+full_data$density <- str_replace_all(full_data$density, ",", ".")
+full_data$literacy <- str_replace_all(full_data$literacy, ",", ".")
+```
+
+```{r, echo = FALSE}
+full_data <- transform(full_data, density = as.numeric(density), 
+               literacy = as.numeric(literacy))
+```
+
+```{r, echo = FALSE}
+full_data <- na.omit(full_data)
+
+
+```
+
+# Introduction  
+
+Well-being and mental health is a growing concern in today’s world, with average depression levels increasing from year to year. One of the first ways to address this issue is by determining the main causes of depression, specifically focusing on daily life-style choices and personal background. This topic is one which may be of interest due to the lack of understanding around depression, and the dangers associated with it going undetected and untreated.
+
+This study aims to identify individual predictors of depression, while also focusing on the broader scope of where people live and how that may impact depression and happiness. Specifically, it aims to determine the relationship between mental health and factors such as country, overall country literacy, personality type, religion, age, sexual orientation, and marital status. 
+
+Generally, it is hypothesized that younger generations who are particularly isolated and constrained will have higher levels of depression. In order to examine these hypotheses, both an exploration and modeling of each of the distinct data sets will take place. In the explorations, general trends will be teased out in order both to make conclusions and better understand the nature of the data for modeling. Through the process of modeling, predictions and relationships between variables will be drawn out.
+
+# Problem Statement Addressed  
+
+The below analysis addresses the problem surrounding mental health--particularly related to depression. Given the growing issue of mental health, this analysis aims to predict depression based on factors such as personality type, country, and demographics. By using this information, this analysis will look to determine if particular countries have higher depression levels across the board, and whether individual responses correspond with that. Further, at the country level, we will determine if social support, perceptions of corruption, or literacy have the largest correlation with happiness, while at the individual level, we will determine if personality type, religion, age, sexual orientation, or marital status have the largest correlation with depression level.
+
+# How Problem Statement was Addressed
+
+## Methodology and Modeling
+
+In order to address the problem statement, we will begin with an exploratory data analysis that focuses on the variables mentioned in our research questions. More specifically, we will examine the correlation between a country's happiness score and its score on social support, perceptions of corruption, and literacy. On the individual level, we will focus on the correlation between how a person responds to particular survey questions and their personality type, religion, age, sexual orientation, and marital status. This will give us an understanding for what impacts a country's overall happiness, and an individual's happiness. 
+
+Because we would also like a general understanding of which countries to focus on, we will look both at the countries available in the pool of respondents to the depression survey. Similarly, we will take a look at the world happiness report to understand which countries have the lowest levels of happiness. Using this information, we can focus our efforts to understand which countries to focus on. 
+
+To tease out more information beyond simple predictors, we will take a look at the correlation between a countries happiness score and a person's response to individual survey questions within that country to see if the happiness score appears to be accurate based on how individual's are feeling. We will also take a look at the correlation between how a person found the survey and their depression level. 
+
+In order to examine these correlations, the exploratory data analysis will begin with a series of graphs-- including, but not limited to--bar graphs, line graphs, and histograms. This visual analysis will be conducted after our data is properly joined on the country level. After the visual analysis, we will further dive into the correlations by performing correlation tests of the variables which appear to be most correlated visually. Those chosen to be the greatest predictors of depression on the individual and country level will be chosen for modeling. The models to be considered for use include linear regression and a decision tree--given the categorical nature of the data. 
+
+## The Data
+
+The data being utilized to address this problem includes a combination of three distinct datasets, which are outlined, cited, and described below:
+
+* Depression Anxiety Stress Scales Responses
+
+Citation: Openpsychometrics.org. 2020. Depression Anxiety Stress Scales Responses, Version 1. Retrieved 2022, October 25 from https://www.kaggle.com/datasets/lucasgreenwell/depression-anxiety-stress-scales-responses?resource=download&select=data.csv
+
+Overview: This data is comprised of questions, answers, and metadata collected from 39775 Depression Anxiety Stress Scales. The data was originally hosted on openpsychometrics.org, which is a nonprofit effort organized to educate the public on psychology and to collect data for psychological research. The survey was open to anyone, and data was collected between 2017 and 2019. There are a total of 172 variables available in the dataset, ranging from a unique identifier, to survey questions related to depression level, to demographic information, to personality information, along with questions used to test the validity of the responses. If any question was unchecked, the value was recorded as a 0.
+
+* World Happiness Report
+
+Citation: Gallup World Poll. 2019. World Happiness Report, Version 2. Retrieved 2022, October 25 from https://www.kaggle.com/datasets/unsdsn/world-happiness?select=2019.csv
+
+Overview: The happiness scores and rankings use data from the Gallup World Poll. The scores are based on answers to the main life evaluation question asked in the poll. The scores are from nationally representative samples for the years 2013 to 2016 and use the Gallup weights to make the estimates representative. The report began in 2012 and has since gained global recognition, being used across the globe to help guide things such as economics, health, and public policy. There are a total of 9 variables in the dataset, including metrics on GDP, social support, healthy life expectancy, freedom to make life choices, generosity, and perception of corruption. 
+
+* Countries of the World
+
+Citation: US Government. 2018. Countries of the World, Version 1. Retrieved 2022, October 25 from https://www.kaggle.com/datasets/fernandol/countries-of-the-world
+
+Overview: This dataset is mostly used to link to other datasets and provide additional information on a country. The data comes from the US government world fact sheet. There are a total of 20 variables, ranging from population size and density, to infant mortality, and literacy. 
+
+# Analysis  
+
+## Correlation
+
+In order to uncover additional information that may not be self-evident in the data, we examined the correlation between every variable on the individual and the country-wide level. 
+
+Beginning with the correlation on the individual level, we will examine the table below, where correlations greater than 0.20 or less than -0.20 are highlighted red. In this table, we are hoping to draw out the greatest correlations between personality traits, depression level, age, religion, sexual orientation, source, and marital status. While there may be some assumptions regarding the direction and strength of the relationships of these variables, this correlation table will assist in drawing out relationships that may be surprising or hidden. The table shows that the correlations between each of the variables is relatively weak; however, the strongest relationship appears to be between Q3A, which is used to determining depression level, and TIPI9, which is the response to how much a person feel they are "calm, emotionally stable". Since this is a negative relationship, it suggests that as a person feels more calm and emotionally stable, their depression level decreases. 
+
+It is also worth noting that although the values for religion, sexual orientation, and source are numeric indicators, the indicators are distinct representations, and thus are not increasing and decreasing on a leveled scale. Therefore, any relationship between these variables is not likely to have much meaning. 
+
+**Individual Correlation**
+
+```{r, echo = FALSE}
+#             UNCOVERING NEW INFORMATION
+
+ind_corr <- cor(full_data[,c(1:16)], method = "pearson")
+
+ind_corr[] <- apply(ind_corr, c(1, 2), function(x) ifelse(x > 0.2 || x < -0.2,
+                                                    paste('\\color{red}', 
+                                                    round(x, 2)), 
+                                                    round(x, 2)))
+
+ind_corr <- replace(ind_corr, upper.tri(ind_corr, TRUE), NA)
+```
+
+```{r, echo = FALSE}
+ind_corr[c(2:16),c(1:8)] %>% 
+  knitr::kable(
+    format = "latex",
+    align = "l",
+    booktabs = TRUE,
+    longtable = TRUE,
+    linesep = "",
+    escape = F
+    ) %>%
+  kableExtra::kable_styling(
+      position = "left",
+      latex_options = c("striped", "repeat_header"),
+      stripe_color = "gray!15"
+    )
+
+ind_corr[c(9:16),c(9:15)] %>% 
+  knitr::kable(
+    format = "latex",
+    align = "l",
+    booktabs = TRUE,
+    longtable = TRUE,
+    linesep = "",
+    escape = F
+    ) %>%
+  kableExtra::kable_styling(
+      position = "left",
+      latex_options = c("striped", "repeat_header", "HOLD_position"),
+      stripe_color = "gray!15"
+    )
+
+```
+
+Now turning to country-wide correlation, the table below examines the correlations between happiness score, social support, perception of corruption, and population density. The table also highlights in red any correlations greater than 0.6 or less than 0.6. The table shows that the correlations on the country-wide level are much stronger than on the individual level. Specifically, we see a very strong relationship between happiness score and social support, suggesting that happiness score increases as social support increases. We also see a strong positive relationship between social support and literacy, suggesting that literacy rates increase as social support increases. 
+
+**Country-Level Correlation**
+
+```{r, echo = FALSE}
+country_corr <- cor(full_data[,c(18:22)], method = "pearson")
+
+country_corr[] <- apply(country_corr, c(1, 2), 
+                        function(x) ifelse(x > 0.6 || x < -0.6,
+                                                    paste('\\color{red}', 
+                                                    round(x, 2)), 
+                                                    round(x, 2)))
+
+country_corr <- replace(country_corr, upper.tri(country_corr, TRUE), NA)
+```
+
+```{r, echo = FALSE}
+country_corr[c(2:5), c(1:4)] %>% 
+  knitr::kable(
+    format = "latex",
+    align = "l",
+    booktabs = TRUE,
+    longtable = TRUE,
+    linesep = "",
+    escape = F
+    ) %>%
+  kableExtra::kable_styling(
+      position = "left",
+      latex_options = c("striped", "repeat_header", "HOLD_position"),
+      stripe_color = "gray!15"
+    )
+
+
+```
+
+## Exploratory Data Analysis: Visualization
+
+The tables below display the countries with the top three highest happiness scores, and the countries with the bottom three lowest happiness scores. As seen in the tables, the happiest countries include Finland, Denmark, and Norway, while the least happy countries include Syria, Tanzania, and Afghanistan. Note again that some countries have been removed due to a lack of data--therefore, this may not represent the happiness and least happy countries overall, but just within our data set. These countries will be used when analyzing happiness levels across countries. 
+
+*Please note that in the below graphs, a response of 0 means that the individual left the question blank.*
+
+```{r, echo = FALSE}
+#             PLOTS AND TABLES
+
+full_data <- full_data %>%
+  mutate(religion = case_when(
+    religion == 0 ~ "No Response",
+    religion == 1 ~ "Agnostic",
+    religion == 2 ~ "Atheist",
+    religion == 3 ~ "Buddhist",
+    religion == 4 ~ "Christian (Catholic)",
+    religion == 5 ~ "Christian (Mormon)",
+    religion == 6 ~ "Christian (Protestant)",
+    religion == 7 ~ "Christian (Other)",
+    religion == 8 ~ "Hindu",
+    religion == 9 ~ "Jewish",
+    religion == 10 ~ "Muslim",
+    religion == 11 ~ "Sikh",
+    religion == 12 ~ "Other"
+    ))
+```
+
+```{r, echo = FALSE}
+full_data <- full_data[!full_data$age >= 90, ]
+full_data <- full_data %>%
+  mutate(age_group = case_when(
+    10 <= age & age <= 20 ~ "10-20",
+    20 < age & age <= 30 ~ "21-30",
+    30 < age & age <= 40 ~ "31-40",
+    40 < age & age <= 50 ~ "41-50",
+    50 < age & age <= 60 ~ "51-60",
+    60 < age & age <= 70 ~ "61-70",
+    70 < age & age <= 80 ~ "71-80",
+    80 < age & age <= 90 ~ "81-90",
+    ))
+```
+
+```{r, echo = FALSE}
+full_data <- full_data %>%
+  mutate(married = case_when(
+    married == 0 ~ "No Response",
+    married == 1 ~ "Never married",
+    married == 2 ~ "Currently married",
+    married == 3 ~ "Previously married"
+    ))
+```
+
+```{r, echo = FALSE}
+full_data <- full_data %>%
+  mutate(orientation = case_when(
+    orientation == 0 ~ "No Response",
+    orientation == 1 ~ "Heterosexual",
+    orientation == 2 ~ "Bisexual",
+    orientation == 3 ~ "Homosexual",
+    orientation == 4 ~ "Asexual",
+    orientation == 5 ~ "Other"
+    ))
+```
+
+```{r, echo = FALSE}
+full_data <- full_data %>%
+  mutate(source = case_when(
+    source == 0 ~ "Other/Unknown",
+    source == 1 ~ "Advertisement",
+    source == 2 ~ "Searched For"
+    ))
+```
+
+```{r, echo = FALSE}
+top_3 <- head(WHR_data[order(-WHR_data$Score), c("country", "Score")], 3)
+
+top_3 %>% 
+  knitr::kable(
+    format = "latex",
+    align = "l",
+    booktabs = TRUE,
+    longtable = TRUE,
+    linesep = "",
+    escape = F
+    ) %>%
+  kableExtra::kable_styling(
+      position = "left",
+      latex_options = c("striped", "repeat_header", "HOLD_position"),
+      stripe_color = "gray!15"
+    )
+```
+
+```{r, echo = FALSE}
+bottom_3 <- tail(WHR_data[order(-WHR_data$Score), c("country", "Score")], 3)
+
+bottom_3 %>% 
+  knitr::kable(
+    format = "latex",
+    align = "l",
+    booktabs = TRUE,
+    longtable = TRUE,
+    linesep = "",
+    escape = F,
+    row.names = FALSE
+    ) %>%
+  kableExtra::kable_styling(
+      position = "left",
+      latex_options = c("striped", "repeat_header", "HOLD_position"),
+      stripe_color = "gray!15"
+    )
+```
+
+```{r, echo = FALSE}
+extreme_countries <- rbind(top_3, bottom_3)
+```
+
+The plots below are representative of happiness levels on the country-wide level. They display the relationship between happiness and social support, happiness and perception of corruption, and happiness and literacy. There appears to be a somewhat strong positive relationship between happiness and social support, while the others do not have a clear linear relationship. Overall, there appears to be a wide spread of points when looking at happiness and perceptions of corruption, with corruption levels being lower on a general level. Contrary to that, literacy rates tend to cluster at the higher end. 
+
+```{r, echo = FALSE}
+plt1 <- ggplot(data = full_data, aes(x = support, y = Score)) +
+  geom_point(color = "mediumorchid") +
+  geom_smooth(method = 'lm', formula = y ~ x, color = "darkorange2") +
+  labs(title = "Happiness vs. Social Support",
+       x = "Social Support",
+       y = "Happiness Score")
+
+plt2 <- ggplot(data = full_data, aes(x = corruption, y = Score)) +
+  geom_point(color = "mediumorchid") + 
+  geom_smooth(method = 'lm', formula = y ~ x, color = "darkorange2") +
+  labs(title = "Happiness vs. Corruption",
+       x = "Perceptions of Corruption",
+       y = "Happiness Score") 
+
+plt3 <- ggplot(data = full_data, aes(x = literacy, y = Score)) +
+  geom_point(color = "mediumorchid") +
+  geom_smooth(method = 'lm', formula = y ~ x, color = "darkorange2") +
+  labs(title = "Happiness vs. Literacy",
+       x = "Literacy",
+       y = "Happiness Score")
+
+ggarrange(plt1, plt2, plt3, ncol = 2, nrow = 2)
+```
+
+```{r, echo = FALSE}
+mean_response <- full_data %>% 
+  group_by(country) %>% 
+  summarise(mean_response = mean(Q3A),
+            .groups = 'drop')
+
+mean_response <- mean_response %>% 
+  filter(country %in% extreme_countries$country)
+
+mean_response <- mean_response %>% 
+  as.data.frame()
+
+mean_response <- mean_response %>%
+  mutate(Rank = case_when(
+    country %in% c(bottom_3$country) ~ "Bottom 3",
+    country %in% c(top_3$country) ~ "Top 3"
+    ))
+```
+
+```{r, echo = FALSE}
+mean_tipi1 <- full_data %>% 
+  group_by(TIPI1) %>% 
+  summarise(mean_response = mean(Q3A),
+            .groups = 'drop')
+
+mean_tipi2 <- full_data %>% 
+  group_by(TIPI2) %>% 
+  summarise(mean_response = mean(Q3A),
+            .groups = 'drop')
+
+mean_tipi3 <- full_data %>% 
+  group_by(TIPI3) %>% 
+  summarise(mean_response = mean(Q3A),
+            .groups = 'drop')
+
+mean_tipi4 <- full_data %>% 
+  group_by(TIPI4) %>% 
+  summarise(mean_response = mean(Q3A),
+            .groups = 'drop')
+
+mean_tipi5 <- full_data %>% 
+  group_by(TIPI5) %>% 
+  summarise(mean_response = mean(Q3A),
+            .groups = 'drop')
+
+mean_tipi6 <- full_data %>% 
+  group_by(TIPI6) %>% 
+  summarise(mean_response = mean(Q3A),
+            .groups = 'drop')
+
+mean_tipi7 <- full_data %>% 
+  group_by(TIPI7) %>% 
+  summarise(mean_response = mean(Q3A),
+            .groups = 'drop')
+
+mean_tipi8 <- full_data %>% 
+  group_by(TIPI8) %>% 
+  summarise(mean_response = mean(Q3A),
+            .groups = 'drop')
+
+mean_tipi9 <- full_data %>% 
+  group_by(TIPI9) %>% 
+  summarise(mean_response = mean(Q3A),
+            .groups = 'drop')
+
+mean_tipi10 <- full_data %>% 
+  group_by(TIPI10) %>% 
+  summarise(mean_response = mean(Q3A),
+            .groups = 'drop')
+```
+
+Below is visualized the average self-reported individual depression levels by country, examining the three highest rated countries and the three lowest rated countries based on the World Happiness Report. This graph was built in an attempt to see if self-reported depression levels would align with happiness scores reported on the World Happiness Report. Although it does appear that Syria and Tanzania have high self-reported depression levels, which align with the World Happiness Report, Afghanistan has low self-reported depression levels, which does not align with the World Happiness Report. Note that the green line represents average depression level across all countries and individuals, suggesting that all countries shown here have a higher than average depression level, except Afghanistan. 
+
+```{r, echo = FALSE}
+ggplot(data = mean_response, aes(x = country, y = mean_response,
+                                 fill = Rank)) + 
+  geom_bar(stat = 'identity') +
+  geom_hline(yintercept = mean(full_data$Q3A), color = "olivedrab4", size = .8) +
+  scale_fill_manual(values = c("mediumorchid", "darkorange2")) +
+  labs(title = "Average Depression Level by Country",
+       x = "Country", y = "Depression Level (1 - 4)")
+```
+
+The ten plots displayed below examine the relationship between personality traits and depression level. Note that the green line represents average depression level across all data points. Generally, the personality traits characterized by energetic, self-composed, and positive attributes appear to decrease across the chart--suggesting that those who identify more with those traits are less depressed. Contrarily, the personality traits characterized by lethargic, anxious, and negative attributes appear to increase across the chart--suggesting that those who identify more with those traits are more depressed. We can especially focus on the "Anxious, easily upset" and "Calm, emotionally stable" charts to represent this. 
+
+```{r, echo = FALSE}
+plt1 <- ggplot(data = mean_tipi1, aes(x = TIPI1, y = mean_response)) + 
+  geom_bar(stat = 'identity', fill = "mediumorchid") +
+  geom_hline(yintercept = mean(full_data$Q3A), color = "olivedrab4") +
+  labs(title = "Extraverted, enthusiastic",
+       x = "Personality Type Level", y = "Depression Level (1 - 4)")
+
+plt2 <- ggplot(data = mean_tipi2, aes(x = TIPI2, y = mean_response)) + 
+  geom_bar(stat = 'identity', fill = "mediumorchid") +
+  geom_hline(yintercept = mean(full_data$Q3A), color = "olivedrab4") +
+  labs(title = "Critical, quarrelsome",
+       x = "Personality Type Level", y = "Depression Level (1 - 4)")
+
+plt3 <- ggplot(data = mean_tipi3, aes(x = TIPI3, y = mean_response)) + 
+  geom_bar(stat = 'identity', fill = "mediumorchid") +
+  geom_hline(yintercept = mean(full_data$Q3A), color = "olivedrab4") +
+  labs(title = "Dependable, self-disciplined",
+       x = "Personality Type Level", y = "Depression Level (1 - 4)")
+
+plt4 <- ggplot(data = mean_tipi4, aes(x = TIPI4, y = mean_response)) + 
+  geom_bar(stat = 'identity', fill = "mediumorchid") +
+  geom_hline(yintercept = mean(full_data$Q3A), color = "olivedrab4") +
+  labs(title = "Anxious, easily upset",
+       x = "Personality Type Level", y = "Depression Level (1 - 4)")
+
+plt5 <- ggplot(data = mean_tipi5, aes(x = TIPI5, y = mean_response)) + 
+  geom_bar(stat = 'identity', fill = "mediumorchid") +
+  geom_hline(yintercept = mean(full_data$Q3A), color = "olivedrab4") +
+  labs(title = "Open to new experiences, complex",
+       x = "Personality Type Level", y = "Depression Level (1 - 4)")
+
+plt6 <- ggplot(data = mean_tipi6, aes(x = TIPI6, y = mean_response)) + 
+  geom_bar(stat = 'identity', fill = "mediumorchid") +
+  geom_hline(yintercept = mean(full_data$Q3A), color = "olivedrab4") +
+  labs(title = "Reserved, quiet",
+       x = "Personality Type Level", y = "Depression Level (1 - 4)")
+
+plt7 <- ggplot(data = mean_tipi7, aes(x = TIPI7, y = mean_response)) + 
+  geom_bar(stat = 'identity', fill = "mediumorchid") +
+  geom_hline(yintercept = mean(full_data$Q3A), color = "olivedrab4") +
+  labs(title = "Sympathetic, warm",
+       x = "Personality Type Level", y = "Depression Level (1 - 4)")
+
+plt8 <- ggplot(data = mean_tipi8, aes(x = TIPI8, y = mean_response)) + 
+  geom_bar(stat = 'identity', fill = "mediumorchid") +
+  geom_hline(yintercept = mean(full_data$Q3A), color = "olivedrab4") +
+  labs(title = "Disorganized, careless",
+       x = "Personality Type Level", y = "Depression Level (1 - 4)")
+
+plt9 <- ggplot(data = mean_tipi9, aes(x = TIPI9, y = mean_response)) + 
+  geom_bar(stat = 'identity', fill = "mediumorchid") +
+  geom_hline(yintercept = mean(full_data$Q3A), color = "olivedrab4") +
+  labs(title = "Calm, emotionally stable",
+       x = "Personality Type Level", y = "Depression Level (1 - 4)")
+
+plt10 <- ggplot(data = mean_tipi10, aes(x = TIPI10, y = mean_response)) + 
+  geom_bar(stat = 'identity', fill = "mediumorchid") +
+  geom_hline(yintercept = mean(full_data$Q3A), color = "olivedrab4") +
+  labs(title = "Conventional, uncreative",
+       x = "Personality Type Level", y = "Depression Level (1 - 4)")
+
+ggarrange(plt1, plt2, plt3, plt4, ncol = 2, nrow = 2)
+ggarrange(plt5, plt6, plt7, plt8, ncol = 2, nrow = 2)
+ggarrange(plt9, ncol = 2, nrow = 2)
+
+```
+
+```{r, echo = FALSE}
+mean_religion <- full_data %>% 
+  group_by(religion) %>% 
+  summarise(mean_response = mean(Q3A),
+            .groups = 'drop')
+```
+
+\newpage
+
+The plot below displays average depression level by religious group. It does not appear that religion has a large impact on depression level, as depression level is relatively stable across the board, with only a slight increase among those who practice Atheism or did not provide a response, and a slight decrease among those who practice Buddhism or Judaism. 
+
+```{r, echo = FALSE}
+ggplot(data = mean_religion, aes(x = religion, y = mean_response)) + 
+  geom_bar(stat = 'identity', fill = "mediumorchid") +
+  geom_hline(yintercept = mean(full_data$Q3A), color = "olivedrab4") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 0.5, vjust = 0.5)) +
+  labs(title = "Depression Level by Religion",
+       x = "Religion", y = "Depression Level (1 - 4)")
+```
+
+```{r, echo = FALSE}
+mean_age <- full_data %>% 
+  group_by(age_group) %>% 
+  summarise(mean_response = mean(Q3A),
+            .groups = 'drop')
+```
+
+\newpage
+
+The plot below displays average depression level by age group, where it appears that, overall, depression level decreases as one grows older, with a slight increase between 40 and 60. Overall, younger people have higher depression levels, and older people have lower depression levels. 
+
+```{r, echo = FALSE}
+ggplot(data = mean_age, aes(x = age_group, y = mean_response)) + 
+  geom_bar(stat = 'identity', fill = "mediumorchid") +
+  geom_hline(yintercept = mean(full_data$Q3A), color = "olivedrab4") +
+  labs(title = "Depression Level by Age Group",
+       x = "Age Group", y = "Depression Level (1 - 4)")
+```
+
+```{r, echo = FALSE}
+mean_orientation <- full_data %>% 
+  group_by(orientation) %>% 
+  summarise(mean_response = mean(Q3A),
+            .groups = 'drop')
+```
+
+\newpage
+
+The plot below displays average depression level by sexual orientation. It does not appear that sexual orientation has a large impact on depression level, as depression level is relatively stable across the board, with only a slight increase among those who are bisexual or other, and a slight decrease among those who are heterosexual or did not provide a response. 
+
+```{r, echo = FALSE}
+ggplot(data = mean_orientation, aes(x = orientation, y = mean_response)) + 
+  geom_bar(stat = 'identity', fill = "mediumorchid") +
+  geom_hline(yintercept = mean(full_data$Q3A), color = "olivedrab4") +
+  labs(title = "Depression Level by Sexual Orientation",
+       x = "Sexual Orientation", y = "Depression Level (1 - 4)")
+```
+
+```{r, echo = FALSE}
+mean_married <- full_data %>% 
+  group_by(married) %>% 
+  summarise(mean_response = mean(Q3A),
+            .groups = 'drop')
+```
+
+\newpage
+
+The plot below displays average depression level by marital status. There does appear to be a clear distinction between those who are currently married and those who are not. While those who were never married or previously married appear to be at a relatively similar level, those who are currently married are significantly below average.
+
+```{r, echo = FALSE}
+ggplot(data = mean_married, aes(x = married, y = mean_response)) + 
+  geom_bar(stat = 'identity', fill = "mediumorchid") +
+  geom_hline(yintercept = mean(full_data$Q3A), color = "olivedrab4") +
+  labs(title = "Depression Level by Marital Status",
+       x = "Marital Status", y = "Depression Level (1 - 4)")
+```
+
+```{r, echo = FALSE}
+mean_source <- full_data %>% 
+  group_by(source) %>% 
+  summarise(mean_response = mean(Q3A),
+            .groups = 'drop')
+```
+
+\newpage
+
+The plot below displays average depression level by source (where a person found the survey). The motivation for this plot is to see if people who are more depressed are more likely to seek out resources, It does not; however, appear that source has a large impact on depression level, as depression level is relatively stable across the board. Depression level is actually higher among those who found the survey via an advertisement versus those who sought it out, thus not supporting the hypothesis. 
+
+```{r, echo = FALSE}
+ggplot(data = mean_source, aes(x = source, y = mean_response)) + 
+  geom_bar(stat = 'identity', fill = "mediumorchid") +
+  geom_hline(yintercept = mean(full_data$Q3A), color = "olivedrab4") +
+  labs(title = "Depression Level by How Person Found Survey",
+       x = "How Person Found Survey", y = "Depression Level (1 - 4)")
+```
+
+## Decision Tree Model  
+
+```{r, echo = FALSE}
+
+#                   DECISION TREE MODEL
+
+
+full_data <- full_data %>%
+  mutate(mental_health = case_when(
+    Q3A == 1 | Q3A == 2 ~ "Depressed",
+    Q3A == 3 | Q3A == 4 ~ "Cheerful"
+    ))
+```
+
+```{r, echo = FALSE}
+create_train_test <- function(data, size = 0.8, train = TRUE) {
+    n_row = nrow(data)
+    total_row = size * n_row
+    train_sample <- 1: total_row
+    if (train == TRUE) {
+        return (data[train_sample, ])
+    } else {
+        return (data[-train_sample, ])
+    }
+}
+```
+
+```{r, echo = FALSE}
+data_train <- create_train_test(full_data, 0.8, train = TRUE)
+data_test <- create_train_test(full_data, 0.8, train = FALSE)
+```
+
+In an attempt to predict depression based on the factors explored in this analysis, a decision tree was built, which examined all predictors and chose those which produced a clear split in the data. After fitting the model, the decision tree seen below was produced. After testing all predictors, the only predictors determined to influence the model included particular personality traits, including TIPI9 (calm, emotionally stable), TIPI4 (anxious, easily upset), and TIPI6 (reserved, quiet). 
+
+At the top, it is the overall probability of depression. It shows the proportion of respondents that are depressed based on their responses. 65% of respondents were depressed. The next node asks whether a person rated themselves as less than a 3 for the personality type "calm, emotionally stable". If yes, then you go down to the root’s left child node. 30% ranked themselves as less than a 3 for the personality type "calm, emotionally stable", with 45% of them being cheerful. If the person rated themselves as greater than or equal to a 3 for the personality type "calm, emotionally stable", you're left with 74% of the population, of which 70% were depressed. We can continue this way until we reach the bottom of the decision tree. 
+
+```{r, warning = FALSE, message = FALSE, echo = FALSE}
+fit <- rpart(mental_health ~ TIPI9 + TIPI4 + TIPI6, data = data_train, method = 'class')
+rpart.plot(fit, extra = 106, box.palette = 'Purples')
+```
+
+Now, to determine the fit of our model, we will calculate the accuracy by checking predictions. After checking for false positive, true positives, false negatives, and true negatives, the accuracy was found to be 67.29%. Thus, this model does an okay job of predicting depression level based on personality type; however, there is much room for improvement. 
+
+```{r, echo = FALSE}
+predict_unseen <- predict(fit, data_test, type = 'class')
+table_mat <- table(data_test$mental_health, predict_unseen)
+accuracy_Test <- sum(diag(table_mat)) / sum(table_mat)
+```
+
+## Implications  
+
+While those struggling with depression may be most impacted by a study such as the one conducted, others--such as mental health providers, parents, and friends and family of those struggling with depression--are also impacted. By being able to determine risk factors for depression, not only can family, friends, and others help to identify those of high risk who may need help from a mental health provider, but mental health providers can make informed decision regarding how to address their clients' needs. 
+
+The implications of this study go far beyond the individual, and also look to determine how to increase the overall happiness of a country at large. By providing this sort of analysis, leaders can make positive change in their local and country-wide communities. 
+
+## Limitations  
+
+One of the major limitations of this analysis which revolves around the data includes the categorical nature of the variables, along with the size of the data. Given the categorical nature of the data, it can be more challenging to tease out relationships between variables, and due to the size of the data, some factors must be dropped for efficiency and scalability. 
+
+Outside of the issues surrounding the data, there are limitations simply due to the nature of the data. Data that is intimately subject to the complexities of human nature is not as suited for predictive purposes. As seen in the final model, only three of the many variables explored offered enough insight to make any kind of prediction, and even those only produced an accuracy of 67%. Further research needs to be done on mental health and more data needs to be collected to more accurately predict depression. 
+
+Finally, the analysis may have been more insightful had additional models been tested to determine if there was a model which fit the data better and offered a higher prediction accuracy. 
+
+## Concluding Remarks  
+
+After performing analysis on mental health and its relation to country, demographics, and personality type, overall, it was determined that the three more successful indicators of depression level are the personality types, "calm, emotionally stable", "anxious, easily upset", and "reserved, quiet". Apart from this distinction, it was further determined that those who are married are less depressed, and those who are not are more depressed. Further, across the board, all religions appear to have similar levels of depression. 
+
+Although this analysis is only breaking the surface when it comes to mental health and what can be done to help those suffering from depression, it does help identify some key issues and predictors that can be used for further research and in practice. 
+
+\newpage
+
+## Code Appendix
+
+```{r ref.label = knitr::all_labels(), echo = TRUE, eval = FALSE}
+```

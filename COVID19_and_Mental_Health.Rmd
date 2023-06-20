@@ -1,0 +1,935 @@
+---
+title: "DSC 630 Final Project Code"
+author: "Taylor Callahan"
+date: '2023-05-31'
+output: pdf_document
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(echo = T,
+                      results = "hide",
+                      fig.show = 'hide')
+```
+
+# Graphs
+
+```{r import-packages1, warning = FALSE, message = FALSE}
+library(dplyr)
+library(ggplot2)
+library(webshot)
+```
+
+```{r import-data1, warning = FALSE, message = FALSE}
+df <- read.csv("covid_mental_health.csv")
+```
+
+```{r subset_data, warning = FALSE, message = FALSE}
+indicator_3 = paste("Took Prescription Medication for Mental Health ",
+                    "And/Or Received Counseling or Therapy, Last 4 Weeks",
+                    sep = "")
+
+indicator_4 = paste("Needed Counseling or Therapy But Did Not Get It",
+                    ", Last 4 Weeks",
+                    sep = "")
+
+df3 <- df[which(df$Indicator == indicator_3 & 
+                  (df$Group == "By Gender" | 
+                     df$Group == "By Age" | 
+                     df$Group == "By State" | 
+                     df$Group == "By Race/Hispanic ethnicity")),]
+
+df4 <- df[which(df$Indicator == indicator_4 & 
+                  (df$Group == "By Gender" | 
+                     df$Group == "By Age" | 
+                     df$Group == "By State" | 
+                     df$Group == "By Race/Hispanic ethnicity")),]
+```
+
+```{r ind3-groups, warning = FALSE, message = FALSE}
+gender_group_3 <- subset(df3[which(df3$Group == "By Gender"),], 
+                         !is.na(Value)) %>%
+  group_by(Subgroup) %>%
+  summarise_at(vars(Value), list(Average = mean))
+
+state_group_3 <- subset(df3[which(df3$Group == "By State"),], 
+                         !is.na(Value)) %>%
+  group_by(Subgroup) %>%
+  summarise_at(vars(Value), list(Average = mean))
+
+age_group_3 <- subset(df3[which(df3$Group == "By Age"),], 
+                         !is.na(Value)) %>%
+  group_by(Subgroup) %>%
+  summarise_at(vars(Value), list(Average = mean))
+
+ethnicity_group_3 <- subset(df3[which(df3$Group == 
+                                        "By Race/Hispanic ethnicity"),], 
+                         !is.na(Value)) %>%
+  group_by(Subgroup) %>%
+  summarise_at(vars(Value), list(Average = mean))
+```
+
+```{r ind4-groups, warning = FALSE, message = FALSE}
+gender_group_4 <- subset(df4[which(df4$Group == "By Gender"),], 
+                         !is.na(Value)) %>%
+  group_by(Subgroup) %>%
+  summarise_at(vars(Value), list(Average = mean))
+
+state_group_4 <- subset(df4[which(df4$Group == "By State"),], 
+                         !is.na(Value)) %>%
+  group_by(Subgroup) %>%
+  summarise_at(vars(Value), list(Average = mean))
+
+age_group_4 <- subset(df4[which(df4$Group == "By Age"),], 
+                         !is.na(Value)) %>%
+  group_by(Subgroup) %>%
+  summarise_at(vars(Value), list(Average = mean))
+
+ethnicity_group_4 <- subset(df4[which(df4$Group == 
+                                        "By Race/Hispanic ethnicity"),], 
+                         !is.na(Value)) %>%
+  group_by(Subgroup) %>%
+  summarise_at(vars(Value), list(Average = mean))
+```
+
+## Indicator 1
+
+```{r in3-by-gender, message = FALSE, warning = FALSE}
+ggplot(data = gender_group_3, aes(x = Subgroup, y = Average)) +
+  geom_bar(stat = "identity", fill = "#457B9D") +
+  geom_text(aes(label = round(Average, 2)), vjust = 1.6, 
+            color = "#F1FAEE", size = 4.5) +
+  labs(title = "By Gender", x = "Gender", y = "Average Percentage") +
+  theme_light() +
+  theme(
+    plot.background = element_rect(fill = "#F1FAEE"),
+    panel.background = element_rect(fill = "#F1FAEE"),
+    plot.title = element_text(color = "#1E3456"),
+    axis.title = element_text(color = "#1E3456")
+  )
+```
+
+```{r ind3-by-state, message = FALSE, warning = FALSE}
+Mean_Low <- mean(subset(df3[which(df3$Group == "By State"),], 
+                         !is.na(Value))$LowCI)
+
+ggplot(data = state_group_3, aes(x = Subgroup, y = Average)) +
+  geom_bar(stat = "identity", aes(fill = Average < Mean_Low)) +
+  scale_fill_manual(values = c('#457B9D', '#1E3456')) +
+  labs(title = "By State", x = "State", y = "Average Percentage") +
+  theme_light() +
+  theme(
+    plot.background = element_rect(fill = "#F1FAEE"),
+    panel.background = element_rect(fill = "#F1FAEE"),
+    plot.title = element_text(color = "#1E3456"),
+    axis.title = element_text(color = "#1E3456"),
+    legend.background = element_rect(fill = "#F1FAEE")
+  ) +
+  theme(axis.text.x = element_text(angle = 90, vjust = .5, hjust = 1, size = 5))
+```
+
+```{r ind3-by-age, message = FALSE, warning = FALSE}
+ggplot(data = age_group_3, 
+       aes(x = Subgroup, y = Average)) +
+  geom_bar(stat="identity", fill = "#457B9D") +
+  geom_text(aes(label = round(Average, 2)), vjust = 1.6, 
+            color = "#F1FAEE", size = 4.5) +
+  labs(title = "By Age", x = "Age Group", y = "Average Percentage") +
+   theme_light() +
+  theme(
+    plot.background = element_rect(fill = "#F1FAEE"),
+    panel.background = element_rect(fill = "#F1FAEE"),
+    plot.title = element_text(color = "#1E3456"),
+    axis.title = element_text(color = "#1E3456")
+  ) +
+  theme(axis.text.x = element_text(angle = 20, vjust = .7, hjust = .5)) 
+```
+
+```{r ind3-change-names, warning  = FALSE, message = FALSE}
+ethnicity_group_3$Subgroup[ethnicity_group_3$Subgroup 
+                           == "Non-Hispanic Asian, single race"] <- "Asian"
+
+ethnicity_group_3$Subgroup[ethnicity_group_3$Subgroup 
+                           == "Non-Hispanic black, single race"] <- "Black"
+
+ethnicity_group_3$Subgroup[ethnicity_group_3$Subgroup 
+                           == "Non-Hispanic white, single race"] <- "White"
+
+ethnicity_group_3$Subgroup[ethnicity_group_3$Subgroup 
+ == "Non-Hispanic, other races and multiple races"] <- "Other/Multiple Races"
+
+```
+
+```{r ind3-by-ethnicity, message = FALSE, warning = FALSE}
+ggplot(data = ethnicity_group_3, 
+       aes(x = Subgroup, y = Average)) +
+  geom_bar(stat="identity", fill = "#457B9D") +
+  geom_text(aes(label = round(Average, 2)), vjust = 1.6, 
+            color = "#F1FAEE", size = 4.5) +
+  labs(title = "By Race/Ethnicity", x = "Race/Ethnicity", 
+       y = "Average Percentage")+
+  theme_light() +
+  theme(
+    plot.background = element_rect(fill = "#F1FAEE"),
+    panel.background = element_rect(fill = "#F1FAEE"),
+    plot.title = element_text(color = "#1E3456"),
+    axis.title = element_text(color = "#1E3456")
+  )
+```
+
+## Indicator 2
+
+```{r, message = FALSE, warning = FALSE}
+ggplot(data = gender_group_4, aes(x = Subgroup, y = Average)) +
+  geom_bar(stat = "identity", fill = "#457B9D") +
+  geom_text(aes(label = round(Average, 2)), vjust = 1.6, 
+            color = "#F1FAEE", size = 4.5) +
+  labs(title = "By Gender", x = "Gender", y = "Average Percentage") +
+  theme_light() +
+  theme(
+    plot.background = element_rect(fill = "#F1FAEE"),
+    panel.background = element_rect(fill = "#F1FAEE"),
+    plot.title = element_text(color = "#1E3456"),
+    axis.title = element_text(color = "#1E3456")
+  )
+```
+
+```{r, message = FALSE, warning = FALSE}
+Mean_High <- mean(subset(df4[which(df4$Group == "By State"),], 
+                         !is.na(Value))$HighCI)
+
+ggplot(data = state_group_4, 
+       aes(x = Subgroup, y = Average)) +
+  geom_bar(stat="identity", aes(fill = Average >  Mean_High)) +
+  scale_fill_manual(values = c('#457B9D', '#1E3456')) +  
+  labs(title = "By State", x = "State", y = "Average Percentage") +
+  theme_light() +
+  theme(
+    plot.background = element_rect(fill = "#F1FAEE"),
+    panel.background = element_rect(fill = "#F1FAEE"),
+    plot.title = element_text(color = "#1E3456"),
+    axis.title = element_text(color = "#1E3456"),
+    legend.background = element_rect(fill = "#F1FAEE")
+  ) +
+  theme(axis.text.x = element_text(angle = 90, vjust = .5, hjust = 1, size = 5))
+```
+
+```{r, message = FALSE, warning = FALSE}
+ggplot(data = age_group_4, 
+       aes(x = Subgroup, y = Average)) +
+  geom_bar(stat="identity", fill = "#457B9D") +
+  geom_text(aes(label = round(Average, 2)), vjust = 1.6, 
+            color = "#F1FAEE", size = 4.5) +
+  labs(title = "By Age", x = "Age Group", y = "Average Percentage") +
+   theme_light() +
+  theme(
+    plot.background = element_rect(fill = "#F1FAEE"),
+    panel.background = element_rect(fill = "#F1FAEE"),
+    plot.title = element_text(color = "#1E3456"),
+    axis.title = element_text(color = "#1E3456")
+  ) +
+  theme(axis.text.x = element_text(angle = 20, vjust = .7, hjust = .5)) 
+```
+
+```{r, warning  = FALSE, message = FALSE}
+ethnicity_group_4$Subgroup[ethnicity_group_4$Subgroup 
+                           == "Non-Hispanic Asian, single race"] <- "Asian"
+
+ethnicity_group_4$Subgroup[ethnicity_group_4$Subgroup 
+                           == "Non-Hispanic black, single race"] <- "Black"
+
+ethnicity_group_4$Subgroup[ethnicity_group_4$Subgroup 
+                           == "Non-Hispanic white, single race"] <- "White"
+
+ethnicity_group_4$Subgroup[ethnicity_group_4$Subgroup 
+ == "Non-Hispanic, other races and multiple races"] <- "Other/Multiple Races"
+
+```
+
+```{r, message = FALSE, warning = FALSE}
+ggplot(data = ethnicity_group_4, 
+       aes(x = Subgroup, y = Average)) +
+  geom_bar(stat="identity", fill = "#457B9D") +
+  geom_text(aes(label = round(Average, 2)), vjust = 1.6, 
+            color = "#F1FAEE", size = 4.5) +
+  labs(title = "By Race/Ethnicity", x = "Race/Ethnicity", 
+       y = "Average Percentage")+
+  theme_light() +
+  theme(
+    plot.background = element_rect(fill = "#F1FAEE"),
+    panel.background = element_rect(fill = "#F1FAEE"),
+    plot.title = element_text(color = "#1E3456"),
+    axis.title = element_text(color = "#1E3456")
+  )
+```
+
+# Data Preparation and Modeling
+
+```{r import-packages, warning = FALSE, message = FALSE}
+# import packages
+library(dplyr)
+library(tidyr)
+library(mltools)
+library(data.table)
+library(FNN)
+library(caret)
+library(rpart)    
+library(rpart.plot)
+```
+
+```{r import-data, warning = FALSE, message = FALSE}
+# import data
+df <- read.csv("covid_mental_health.csv")
+```
+
+## Data Transformation and Cleaning
+
+```{r handle_na_data, warning = FALSE, message = FALSE}
+# drop NA values for percentage (outcome) feature
+df <- df %>% drop_na(Value)
+```
+
+```{r ind, warning = FALSE, message = FALSE}
+# the following variables will be used for subsetting data
+
+# first indicator to be considered
+ind3 = paste("Took Prescription Medication for Mental Health ",
+                    "And/Or Received Counseling or Therapy, Last 4 Weeks",
+                    sep = "")
+
+# second indicator to be considered
+ind4 = paste("Needed Counseling or Therapy But Did Not Get It",
+                    ", Last 4 Weeks",
+                    sep = "")
+```
+
+```{r new_df, warning = FALSE, message = FALSE}
+# indicator 3 dataset, only considering gender, age, state, and ethnicity
+df3 <- df[which(df$Indicator == ind3 & 
+                  (df$Group == "By Gender" | 
+                     df$Group == "By Age" | 
+                     df$Group == "By State" | 
+                     df$Group == "By Race/Hispanic ethnicity")),]
+
+# indicator 4 dataset, only considering gender, age, state, and ethnicity
+df4 <- df[which(df$Indicator == ind4 & 
+                  (df$Group == "By Gender" | 
+                     df$Group == "By Age" | 
+                     df$Group == "By State" | 
+                     df$Group == "By Race/Hispanic ethnicity")),]
+```
+
+```{r drop-columns, warning  = FALSE, message = FALSE}
+# keeping only columns being used for analysis
+df3 <- subset(df3, select = c("Group", "Subgroup", "Time.Period", "Value"))
+df4 <- subset(df4, select = c("Group", "Subgroup", "Time.Period", "Value"))
+```
+
+```{r separate-data, warning = FALSE, message = FALSE}
+# builds 4 dataframes for each group for each indicator
+# each will be modeled
+
+# the variable to undergo one-hot encoding must also be converted to a
+# factor first
+
+df3_gender <- df3[which(df3$Group == "By Gender"),]
+df3_gender$Subgroup <- as.factor(df3_gender$Subgroup)
+df3_age <- df3[which(df3$Group == "By Age"),]
+df3_age$Subgroup <- as.factor(df3_age$Subgroup)
+df3_race <- df3[which(df3$Group == "By Race/Hispanic ethnicity"),]
+df3_race$Subgroup <- as.factor(df3_race$Subgroup)
+df3_state <- df3[which(df3$Group == "By State"),]
+df3_state$Subgroup <- as.factor(df3_state$Subgroup)
+
+df4_gender <- df4[which(df4$Group == "By Gender"),]
+df4_gender$Subgroup <- as.factor(df4_gender$Subgroup)
+df4_age <- df4[which(df4$Group == "By Age"),]
+df4_age$Subgroup <- as.factor(df4_age$Subgroup)
+df4_race <- df4[which(df4$Group == "By Race/Hispanic ethnicity"),]
+df4_race$Subgroup <- as.factor(df4_race$Subgroup)
+df4_state <- df4[which(df4$Group == "By State"),]
+df4_state$Subgroup <- as.factor(df4_state$Subgroup)
+```
+
+```{r one-hot-encoding, warning = FALSE, message = FALSE}
+# one_hot() from the mltools package is used to convert factored variables into
+# dummy variables
+df3_gender <- one_hot(as.data.table(df3_gender))
+df3_age <- one_hot(as.data.table(df3_age))
+df3_race <- one_hot(as.data.table(df3_race))
+df3_state <- one_hot(as.data.table(df3_state))
+
+df4_gender <- one_hot(as.data.table(df4_gender))
+df4_age <- one_hot(as.data.table(df4_age))
+df4_race <- one_hot(as.data.table(df4_race))
+df4_state <- one_hot(as.data.table(df4_state))
+
+# the name of the dataset tells what group, so we no longer need the group
+# column
+df3_gender <- df3_gender[,-1]
+df3_age <- df3_age[,-1]
+df3_race <- df3_race[,-1]
+df3_state <- df3_state[,-1]
+
+df4_gender <- df4_gender[,-1]
+df4_age <- df4_age[,-1]
+df4_race <- df4_race[,-1]
+df4_state <- df4_state[,-1]
+```
+
+```{r train-test, warning = FALSE, message = FALSE}
+# randomization is going to be taking place from this point forward, so
+# seed is being set for reproducibility
+set.seed(7)
+
+# 70% of the data in each dataframe is for training and 30% is for testing
+# using sample() to select a random sample for each
+sample_df3_gender <- sample(c(TRUE, FALSE), nrow(df3_gender), replace = TRUE,
+                 prob = c(0.7, 0.3))
+train_df3_gender <- df3_gender[sample_df3_gender, ]
+test_df3_gender <- df3_gender[!sample_df3_gender, ]
+
+sample_df3_age <- sample(c(TRUE, FALSE), nrow(df3_age), replace = TRUE,
+                 prob = c(0.7, 0.3))
+train_df3_age <- df3_age[sample_df3_age, ]
+test_df3_age <- df3_age[!sample_df3_age, ]
+
+sample_df3_state <- sample(c(TRUE, FALSE), nrow(df3_state), replace = TRUE,
+                 prob = c(0.7, 0.3))
+train_df3_state <- df3_state[sample_df3_state, ]
+test_df3_state <- df3_state[!sample_df3_state, ]
+
+sample_df3_race <- sample(c(TRUE, FALSE), nrow(df3_race), replace = TRUE,
+                 prob = c(0.7, 0.3))
+train_df3_race <- df3_race[sample_df3_race, ]
+test_df3_race <- df3_race[!sample_df3_race, ]
+
+sample_df4_gender <- sample(c(TRUE, FALSE), nrow(df4_gender), replace = TRUE,
+                 prob = c(0.7, 0.3))
+train_df4_gender <- df4_gender[sample_df4_gender, ]
+test_df4_gender <- df4_gender[!sample_df4_gender, ]
+
+sample_df4_age <- sample(c(TRUE, FALSE), nrow(df4_age), replace = TRUE,
+                 prob = c(0.7, 0.3))
+train_df4_age <- df4_age[sample_df4_age, ]
+test_df4_age <- df4_age[!sample_df4_age, ]
+
+sample_df4_state <- sample(c(TRUE, FALSE), nrow(df4_state), replace = TRUE,
+                 prob = c(0.7, 0.3))
+train_df4_state <- df4_state[sample_df4_state, ]
+test_df4_state <- df4_state[!sample_df4_state, ]
+
+sample_df4_race <- sample(c(TRUE, FALSE), nrow(df4_race), replace = TRUE,
+                 prob = c(0.7, 0.3))
+train_df4_race <- df4_race[sample_df4_race, ]
+test_df4_race <- df4_race[!sample_df4_race, ]
+```
+
+```{r find-best-k, warning = FALSE, message = FALSE}
+# calculate RMSE given actual and predicted values
+rmse = function(actual, predicted) {
+  sqrt(mean((actual - predicted) ^ 2))
+}
+
+# takes training and test set as parameters and finds rmse for each of the
+# chosen k values
+make_knn_pred = function(k = 1, training, predicting) {
+  # make predictions
+  pred = FNN::knn.reg(train = subset(training, select = -c(Value)), 
+                      test = subset(predicting, select = -c(Value)), 
+                      y = training$Value, k = k)$pred
+  act = predicting$Value   # test outcomes
+  rmse(predicted = pred, actual = act)  # calculates rmse
+}
+
+# define values of k to evaluate
+k = c(1, 5, 10, 25, 50)
+```
+
+```{r find-k_test, warning = FALSE, message = FALSE}
+# get train RMSEs
+knn_trn_rmse = sapply(k, make_knn_pred, 
+                      training = train_df3_state, 
+                      predicting = train_df3_state)
+# get test RMSEs
+knn_tst_rmse = sapply(k, make_knn_pred, 
+                      training = train_df3_state, 
+                      predicting = test_df3_state)
+
+# determine the best k for KNN
+best_k = k[which.min(knn_tst_rmse)]
+
+# find overfitting, underfitting, and best k
+fit_status = ifelse(k < best_k, "Over", ifelse(k == best_k, "Best", "Under"))
+```
+
+```{r show_results_test, warning = FALSE, message = FALSE}
+# summarize results
+knn_results = data.frame(
+  k,
+  round(knn_trn_rmse, 2),
+  round(knn_tst_rmse, 2),
+  fit_status
+)
+colnames(knn_results) = c("k", "Train RMSE", "Test RMSE", "Fit")
+
+# display results
+knitr::kable(knn_results, escape = FALSE, booktabs = TRUE)
+
+```
+
+```{r fit-test-model, warning = FALSE, message = FALSE}
+# fit model with chosen k and "Value" as outcome
+model <- train(
+  Value~., data = train_df3_state, method = "knn",
+  trControl = trainControl("cv", number = 5),
+  preProcess = c("center", "scale")
+  )
+
+# make predictions based on test data and model fit
+predictions <- model %>% predict(test_df3_state)
+
+# calculate RMSE and print to screen
+RMSE(predictions, test_df3_state$Value)
+```
+
+```{r tuning-dt, warning = FALSE, message = FALSE}
+# create test values for a grid search
+hyper_grid <- expand.grid(
+  minsplit = seq(5, 20, 1),
+  maxdepth = seq(8, 15, 1)
+)
+
+# create empty list to hold tested models
+models <- list()
+
+# loops through options in grid search to test models
+for (i in 1:nrow(hyper_grid)) {
+  
+  # get minsplit, maxdepth values at row i
+  minsplit <- hyper_grid$minsplit[i]
+  maxdepth <- hyper_grid$maxdepth[i]
+
+  # train a model and store in the list
+  models[[i]] <- rpart(
+    formula = Value ~ .,
+    data = train_df3_state,
+    method = "anova",
+    control = list(minsplit = minsplit, maxdepth = maxdepth)
+    )
+}
+```
+
+```{r find-optimal-tree, warning = FALSE, message = FALSE}
+# function to get optimal cp
+get_cp <- function(x) {
+  min <- which.min(x$cptable[, "xerror"])
+  cp <- x$cptable[min, "CP"] 
+}
+
+# function to get minimum error
+get_min_error <- function(x) {
+  min <- which.min(x$cptable[, "xerror"])
+  xerror <- x$cptable[min, "xerror"] 
+}
+
+# take parameters from grid search and pair them with their rmse
+# order by lowest to greatest. First row will be optimal selections
+hyper_grid %>%
+  mutate(
+    cp = purrr::map_dbl(models, get_cp),
+    error = purrr::map_dbl(models, get_min_error)
+    ) %>%
+  arrange(error) %>%
+  top_n(-5, wt = error)
+```
+
+```{r optimal-tree, warning = FALSE, message = FALSE}
+# fit optimal tree based on above choices
+optimal_tree <- rpart(
+    formula = Value ~ .,
+    data    = train_df3_state,
+    method  = "anova",
+    control = list(minsplit = 7, maxdepth = 12, cp = 0.01)
+    )
+
+# make predictions and print RMSE for the decision tree model
+pred <- predict(optimal_tree, newdata = test_df3_state)
+RMSE(pred = pred, obs = test_df3_state$Value)
+```
+
+```{r plot-tree, warning = FALSE, message = FALSE, echo = FALSE}
+# show decision tree
+rpart.plot(optimal_tree)
+```
+
+```{r find-k1, warning = FALSE, message = FALSE}
+# define values of k to evaluate
+# k needs to be less than the number of observations (8 obs in test set)
+k = c(2, 3, 4, 5, 6)
+
+# get train RMSEs
+knn_trn_rmse = sapply(k, make_knn_pred, 
+                      training = train_df3_gender, 
+                      predicting = train_df3_gender)
+# get test RMSEs
+knn_tst_rmse = sapply(k, make_knn_pred, 
+                      training = train_df3_gender, 
+                      predicting = test_df3_gender)
+
+# determine the best k for KNN
+best_k = k[which.min(knn_tst_rmse)]
+
+# find overfitting, underfitting, and best k
+fit_status = ifelse(k < best_k, "Over", ifelse(k == best_k, "Best", "Under"))
+```
+
+```{r show_results1, warning = FALSE, message = FALSE}
+# summarize results
+knn_results = data.frame(
+  k,
+  round(knn_trn_rmse, 2),
+  round(knn_tst_rmse, 2),
+  fit_status
+)
+colnames(knn_results) = c("k", "Train RMSE", "Test RMSE", "Fit")
+
+# display results
+knitr::kable(knn_results, escape = FALSE, booktabs = TRUE)
+```
+
+```{r fit-first-model1, warning = FALSE, message = FALSE}
+# fit model with chosen k and "Value" as outcome
+model <- train(
+  Value~., data = train_df3_gender, method = "knn",
+  trControl = trainControl("cv", number = 2),
+  preProcess = c("center", "scale")
+  )
+
+# make predictions based on test data and model fit
+predictions <- model %>% predict(test_df3_gender)
+
+# calculate RMSE and print to screen
+RMSE(predictions, test_df3_gender$Value)
+```
+
+```{r find-k2, warning = FALSE, message = FALSE}
+# define values of k to evaluate
+# k needs to be less than the number of observations (17 obs in test set)
+k = c(2, 3, 5, 10, 15)
+
+# get train RMSEs
+knn_trn_rmse = sapply(k, make_knn_pred, 
+                      training = train_df3_race, 
+                      predicting = train_df3_race)
+# get test RMSEs
+knn_tst_rmse = sapply(k, make_knn_pred, 
+                      training = train_df3_race, 
+                      predicting = test_df3_race)
+
+# determine the best k for KNN
+best_k = k[which.min(knn_tst_rmse)]
+
+# find overfitting, underfitting, and best k
+fit_status = ifelse(k < best_k, "Over", ifelse(k == best_k, "Best", "Under"))
+```
+
+```{r show_results2, warning = FALSE, message = FALSE}
+# summarize results
+knn_results = data.frame(
+  k,
+  round(knn_trn_rmse, 2),
+  round(knn_tst_rmse, 2),
+  fit_status
+)
+colnames(knn_results) = c("k", "Train RMSE", "Test RMSE", "Fit")
+
+# display results
+knitr::kable(knn_results, escape = FALSE, booktabs = TRUE)
+```
+
+```{r fit-second-model1, warning = FALSE, message = FALSE}
+# fit model with chosen k and "Value" as outcome
+model <- train(
+  Value~., data = train_df3_race, method = "knn",
+  trControl = trainControl("cv", number = 2),
+  preProcess = c("center", "scale")
+  )
+
+# make predictions based on test data and model fit
+predictions <- model %>% predict(test_df3_race)
+
+# calculate RMSE and print to screen
+RMSE(predictions, test_df3_race$Value)
+```
+
+```{r find-k3, warning = FALSE, message = FALSE}
+# define values of k to evaluate
+# k needs to be less than the number of observations (26 obs in test set)
+k = c(2, 5, 10, 15, 25)
+
+# get train RMSEs
+knn_trn_rmse = sapply(k, make_knn_pred, 
+                      training = train_df3_age, 
+                      predicting = train_df3_age)
+# get test RMSEs
+knn_tst_rmse = sapply(k, make_knn_pred, 
+                      training = train_df3_age, 
+                      predicting = test_df3_age)
+
+# determine the best k for KNN
+best_k = k[which.min(knn_tst_rmse)]
+
+# find overfitting, underfitting, and best k
+fit_status = ifelse(k < best_k, "Over", ifelse(k == best_k, "Best", "Under"))
+```
+
+```{r show_results3, warning = FALSE, message = FALSE}
+# summarize results
+knn_results = data.frame(
+  k,
+  round(knn_trn_rmse, 2),
+  round(knn_tst_rmse, 2),
+  fit_status
+)
+colnames(knn_results) = c("k", "Train RMSE", "Test RMSE", "Fit")
+
+# display results
+knitr::kable(knn_results, escape = FALSE, booktabs = TRUE)
+```
+
+```{r fit-third-model1, warning = FALSE, message = FALSE}
+# fit model with chosen k and "Value" as outcome
+model <- train(
+  Value~., data = train_df3_age, method = "knn",
+  trControl = trainControl("cv", number = 25),
+  preProcess = c("center", "scale")
+  )
+
+# make predictions based on test data and model fit
+predictions <- model %>% predict(test_df3_age)
+
+# calculate RMSE and print to screen
+RMSE(predictions, test_df3_age$Value)
+```
+
+```{r results3, warning = FALSE, message = FALSE}
+# put results in dataframe
+results3 <- data.frame (Feature  = c("Gender", "State", "Race/Ethnicity", 
+                               "Age Group"),
+                  KNN_RMSE = c("0.866", "2.447", "1.347", "1.452")
+                  )
+
+# display results in table
+knitr::kable(results3, col.names = gsub("[.]", " ", names(results3)))
+```
+
+```{r find-k4, warning = FALSE, message = FALSE}
+# define values of k to evaluate
+# k needs to be less than the number of observations (207 obs in test set)
+k = c(1, 5, 10, 25, 50)
+
+# get train RMSEs
+knn_trn_rmse = sapply(k, make_knn_pred, 
+                      training = train_df4_state, 
+                      predicting = train_df4_state)
+# get test RMSEs
+knn_tst_rmse = sapply(k, make_knn_pred, 
+                      training = train_df4_state, 
+                      predicting = test_df4_state)
+
+# determine the best k for KNN
+best_k = k[which.min(knn_tst_rmse)]
+
+# find overfitting, underfitting, and best k
+fit_status = ifelse(k < best_k, "Over", ifelse(k == best_k, "Best", "Under"))
+```
+
+```{r show_results4, warning = FALSE, message = FALSE}
+# summarize results
+knn_results = data.frame(
+  k,
+  round(knn_trn_rmse, 2),
+  round(knn_tst_rmse, 2),
+  fit_status
+)
+colnames(knn_results) = c("k", "Train RMSE", "Test RMSE", "Fit")
+
+# display results
+knitr::kable(knn_results, escape = FALSE, booktabs = TRUE)
+```
+
+```{r fit-first-model2, warning = FALSE, message = FALSE}
+# fit model with chosen k and "Value" as outcome
+model <- train(
+  Value~., data = train_df4_state, method = "knn",
+  trControl = trainControl("cv", number = 5),
+  preProcess = c("center", "scale")
+  )
+
+# make predictions based on test data and model fit
+predictions <- model %>% predict(test_df4_state)
+
+# calculate RMSE and print to screen
+RMSE(predictions, test_df4_state$Value)
+```
+
+```{r find-k5, warning = FALSE, message = FALSE}
+# define values of k to evaluate
+# k needs to be less than the number of observations (8 obs in test set)
+k = c(2, 3, 4, 5, 6)
+
+# get train RMSEs
+knn_trn_rmse = sapply(k, make_knn_pred, 
+                      training = train_df4_gender, 
+                      predicting = train_df4_gender)
+# get test RMSEs
+knn_tst_rmse = sapply(k, make_knn_pred, 
+                      training = train_df4_gender, 
+                      predicting = test_df4_gender)
+
+# determine the best k for KNN
+best_k = k[which.min(knn_tst_rmse)]
+
+# find overfitting, underfitting, and best k
+fit_status = ifelse(k < best_k, "Over", ifelse(k == best_k, "Best", "Under"))
+```
+
+```{r show_results5, warning = FALSE, message = FALSE}
+# summarize results
+knn_results = data.frame(
+  k,
+  round(knn_trn_rmse, 2),
+  round(knn_tst_rmse, 2),
+  fit_status
+)
+colnames(knn_results) = c("k", "Train RMSE", "Test RMSE", "Fit")
+
+# display results
+knitr::kable(knn_results, escape = FALSE, booktabs = TRUE)
+```
+
+```{r fit-second-model2, warning = FALSE, message = FALSE}
+# fit model with chosen k and "Value" as outcome
+model <- train(
+  Value~., data = train_df4_gender, method = "knn",
+  trControl = trainControl("cv", number = 2),
+  preProcess = c("center", "scale")
+  )
+
+# make predictions based on test data and model fit
+predictions <- model %>% predict(test_df4_gender)
+
+# calculate RMSE and print to screen
+RMSE(predictions, test_df4_gender$Value)
+```
+
+```{r find-k6, warning = FALSE, message = FALSE}
+# define values of k to evaluate
+# k needs to be less than the number of observations (18 obs in test set)
+k = c(2, 3, 5, 10, 15)
+
+# get train RMSEs
+knn_trn_rmse = sapply(k, make_knn_pred, 
+                      training = train_df4_race, 
+                      predicting = train_df4_race)
+# get test RMSEs
+knn_tst_rmse = sapply(k, make_knn_pred, 
+                      training = train_df4_race, 
+                      predicting = test_df4_race)
+
+# determine the best k for KNN
+best_k = k[which.min(knn_tst_rmse)]
+
+# find overfitting, underfitting, and best k
+fit_status = ifelse(k < best_k, "Over", ifelse(k == best_k, "Best", "Under"))
+```
+
+```{r show_results6, warning = FALSE, message = FALSE}
+# summarize results
+knn_results = data.frame(
+  k,
+  round(knn_trn_rmse, 2),
+  round(knn_tst_rmse, 2),
+  fit_status
+)
+colnames(knn_results) = c("k", "Train RMSE", "Test RMSE", "Fit")
+
+# display results
+knitr::kable(knn_results, escape = FALSE, booktabs = TRUE)
+```
+
+```{r fit-third-model2, warning = FALSE, message = FALSE}
+# fit model with chosen k and "Value" as outcome
+model <- train(
+  Value~., data = train_df4_race, method = "knn",
+  trControl = trainControl("cv", number = 2),
+  preProcess = c("center", "scale")
+  )
+
+# make predictions based on test data and model fit
+predictions <- model %>% predict(test_df4_race)
+
+# calculate RMSE and print to screen
+RMSE(predictions, test_df4_race$Value)
+```
+
+```{r find-k7, warning = FALSE, message = FALSE}
+# define values of k to evaluate
+# k needs to be less than the number of observations (25 obs in test set)
+k = c(2, 5, 10, 15, 25)
+
+# get train RMSEs
+knn_trn_rmse = sapply(k, make_knn_pred, 
+                      training = train_df4_age, 
+                      predicting = train_df4_age)
+# get test RMSEs
+knn_tst_rmse = sapply(k, make_knn_pred, 
+                      training = train_df4_age, 
+                      predicting = test_df4_age)
+
+# determine the best k for KNN
+best_k = k[which.min(knn_tst_rmse)]
+
+# find overfitting, underfitting, and best k
+fit_status = ifelse(k < best_k, "Over", ifelse(k == best_k, "Best", "Under"))
+```
+
+```{r show_results7, warning = FALSE, message = FALSE}
+# summarize results
+knn_results = data.frame(
+  k,
+  round(knn_trn_rmse, 2),
+  round(knn_tst_rmse, 2),
+  fit_status
+)
+colnames(knn_results) = c("k", "Train RMSE", "Test RMSE", "Fit")
+
+# display results
+knitr::kable(knn_results, escape = FALSE, booktabs = TRUE)
+```
+
+```{r fit-last-model, warning = FALSE, message = FALSE}
+# fit model with chosen k and "Value" as outcome
+model <- train(
+  Value~., data = train_df4_age, method = "knn",
+  trControl = trainControl("cv", number = 2),
+  preProcess = c("center", "scale")
+  )
+
+# make predictions based on test data and model fit
+predictions <- model %>% predict(test_df4_age)
+
+# calculate RMSE and print to screen
+RMSE(predictions, test_df4_age$Value)
+```
+
+```{r results4, warning = FALSE, message = FALSE}
+# put results in dataframe
+results4 <- data.frame (Feature  = c("Gender", "State", "Race/Ethnicity", 
+                               "Age Group"),
+                  KNN_RMSE = c("0.767", "1.926", "1.318", "1.222")
+                  )
+
+# display results in table
+knitr::kable(results4, col.names = gsub("[.]", " ", names(results3)))
+```

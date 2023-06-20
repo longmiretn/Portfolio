@@ -1,0 +1,1721 @@
+---
+output: pdf_document
+header-includes:
+    - \usepackage{caption}
+---
+
+\begin{centering}
+
+\Large
+
+{\bf An Exploration of the Social Predictors of Well-Being and the
+Impact of Demographics and COVID-19 \\ on Online Educational
+Product Use}
+
+\vspace{1 cm}
+
+\normalsize
+By
+
+\vspace{0.5 cm}
+
+\Large
+
+{\bf Taylor Longmire}
+
+\vspace{1.5 cm}
+
+in partial fulfillment of the requirements \\
+for the degree of B.S. in Mathematical Statistics with Honors \\  Department of Mathematics and Statistics \\ Wake Forest University \\ December 2021
+
+\vspace{1.5 cm}
+
+\normalsize
+
+\end{centering}
+
+\newpage
+
+# Abstract
+
+Well-being and mental health is a growing concern in today's world, with average depression levels increasing from year to year. One of the first ways to address this issue is by determining the main causes of depression, specifically focusing on daily life-style choices and personal background. Another issue facing the world, which is particularly stark at the writing of this paper, is the use of online educational tools and whether schools and individuals have access to these products both pre-COVID-19 and post-COVID-19. This study aims both to identify predictors both of depression and hopefulness, while also focusing on identifying trends in online educational product use. Specifically, it aims first to determine the relationship between mental health and factors such as generation, relationship status, religious and political affiliation, and education. Further, it will specifically focus on the relationship between online product use and demographic data such as the percentage of students on free or reduced lunch. 
+
+Generally, it is hypothesized that younger generations who are particularly isolated and constrained will have higher levels of depression. It is also hypothesized that more rural, less wealthy school districts will generally have less engagement with online educational products. In order to examine these hypotheses, both an exploration and modeling of each of the distinct data sets will take place. In the explorations, general trends will be teased out in order both to make conclusions and better understand the nature of the data for modeling. Through the process of modeling, predictions and relationships between variables will be drawn out. 
+
+The results of the study suggest that well-being is certainly impacted by social factors such as relationship status, political and religious affiliation, and opinion on particular social matters, such as whether women should work or stay home. Generally, it was determined that depression level increases among individuals who have been divorced, who have less friends, who are more politically liberal, who have less income, and who have poorer health. In the exploration of online educational product use, the results suggest that online product use is affected both by demographic information, as well as the impact of COVID-19. Generally, it was determined that districts with greater wealth and less access to social help, such as less liberal school systems, have less engagement with online educational tools. Further, it was seen that online product use generally increases from pre-COVID-19 to post-COVID-19. 
+
+\newpage
+
+\centering
+\raggedright
+\newpage
+\tableofcontents
+
+\newpage
+
+\captionsetup[table]{labelformat=empty}
+
+```{r import-data, warning = FALSE, message = FALSE, echo = FALSE}
+load(file = "22100-0002-Data.rda")
+library(ggplot2)
+library(tidyverse)
+library(tidymodels)
+library(nnet)
+library("ggpubr")
+library(ISLR)
+library(rpart.plot)
+library(glmnet)
+library(caret)
+library(lme4)
+library(dplyr)
+library(gridExtra)
+```
+
+# Chapter 1: Longitudinal Data Exploring Mental Health and Well-Being
+
+# Section 1: Introduction
+
+The data being examined comes from a longitudinal study conducted by Syracuse University and the University of Southern California. The study was initiated in 1971 and began as a survey of inter-generational relations among 300 three-generation California families with grandparents in their sixties, middle-aged parents in their early forties, and grandchildren aged 15 to 25. The study broadened in 1991 to include a fourth generation, which contains the great-grandchildren of these same families. [2]
+
+The study contains 1,800 rows and 1,453 columns, which contains information on family structure, household composition, affectual solidarity and conflict, values, attitudes, behaviors, role importance, marital relationships, health and fitness, mental health and well-being, caregiving, leisure activities, and life events and concerns. Demographic variables include age, sex, income, employment status, marital status, socioeconomic history, education, religion, ethnicity, and military service. [2]
+
+With this data, we are going to explore four main questions involving generation, relationship status, opinions on women working, and depression. Within generation, we are going to attempt to tease out a relationship between generation, mental health, and well-being, where we hope to be able to identify whether or not particular well-being factors change by generation--these questions will be explored in section 3. Within relationship status, we are going to attempt to find a relationship between a person's relationship status and mental health and well-being, where we hope to be able to identify whether or not a person's relationship status influences particular factors of well-being--these questions will be explored in section 4. Within opinions on women working, we are going to attempt to identify a relationship between a person's opinion on women working and religious influence, politics, and if they believe in obeying their husband, where the impact of generation is also taken into account--these questions will be explored in section 5. Finally, within depression, we will examine particular factors of depression within our generation exploration in section 3, while also diving deeper into the predictors of depression in section 6, where we will look at how depression is affected by politics, friends, income, health, and divorce. 
+
+# Section 2: Generation
+
+## Section 2.1: Introduction to Mental Health and Well-being by Generation
+
+Before beginning our analysis, an exploration of the data was necessary to draw out fundamental characteristics of the data, as well as identify possible underlying relationships. The three $Y$ variables that were first chosen for examination were **HF042R8**, which corresponds to "Felt Depressed" (in the past week), **HF044R8**, which corresponds to "Hopeful About the Future" (in the past week), and **HF050R8**, which corresponds to "Lonely" (in the past week). These variables can be found on pages 135, 136, and 139 in the Codebook.
+
+The $X$ variable that was first chosen is **GEN_R**, which corresponds to "Generation". This variable can be found on page 2 in the Codebook. 
+
+For clarity, the HF042R8 variable was renamed "Depressed", the HF044R8 variable was renamed "Hopeful", and the HF050R8 variable was renamed "Lonely".
+
+```{r subset, echo = FALSE}
+myVars <- c("HF042R8", "HF044R8", "HF050R8", "GEN_R")
+subset <- da22100.0002[myVars] 
+subset <- na.omit(subset)
+
+subset <- subset %>%
+  rename(
+    Depressed = HF042R8,
+    Lonely = HF050R8,
+    Hopeful = HF044R8
+  )
+
+subset <- subset[-which(subset$Depressed == '(9) Response not codable'), ]
+subset <- subset[-which(subset$Hopeful == '(9) Response not codable'), ]
+```
+
+## Section 2.2: Generation Counts
+
+First, we looked at the counts for each generation in the data set (Table 2.1). From this, we can see that the highest percentage of individuals falls within generation 3, with $40.42$% of the data, while the lowest percentage of individuals falls within generation 1, with $1.20$% of the data. Because of the very small portion of the data comprised by generation 1, some unexpected and uninterpretable  outcomes may occur. Thus, let us remove generation 1 from our subset of data.
+
+```{r table, echo = FALSE}
+knitr::kable(table(subset$GEN_R), col.names = c("Generation", "Count"), 
+             caption = "Table 2.1: Generation Counts")
+```
+
+```{r remove-gen1, echo = FALSE}
+subset <- subset[-which(subset$GEN_R == '1'), ]
+```
+
+Now that these counts have been observed, in the sections below, we will explore the relationship between generation and whether or not individuals feel depressed, hopeful, and/or lonely.
+
+## Section 2.3: Felt Depressed
+
+### Section 2.3.1: Visualizing the Relationship: Depressed by Generation
+
+The bar graph below (Figure 2.1) shows how often individuals felt depressed by generation, where (1) corresponds to "Rarely or none of the time", (2) corresponds to "A little of the time", (3) corresponds to "A moderate amount of the time", and (4) corresponds to "Most or all of the time". It appears that most people felt depressed rarely, while the least people felt depressed most of the time. It also appears that in the lowest category of depression, generation 2 is the most prevalent, and in the highest category of depression, generation 3 is the most prevalent. 
+
+```{r plot-prop-nogen1, warning = FALSE, message = FALSE, echo = FALSE}
+ggplot(data = subset, aes(x = Depressed,  group = factor(GEN_R))) + 
+    geom_bar(aes(y = ..prop.., fill = factor(GEN_R)), stat = "count", 
+             position = position_dodge()) +
+  scale_x_discrete(labels = c("1", "2", "3", "4")) +
+  scale_fill_manual(name = "Generation",
+                    values = c("2" = "cadetblue1", "3" = "cadetblue3",
+                               "4" =" cadetblue4")) +
+  labs(title = "Figure 2.1: Depression Level by Generation (Proportion)", 
+       x = "Depression Level (where 1 is rarely and 4 is most of the time)", 
+       y = "Proportion") +
+  theme_light()
+```
+
+### Section 2.3.2: Exploring the Model: Depressed by Generation
+
+Now that we have visualized the relationship between generation and depression, let us fit an appropriate model to explore that relationship further. Because we have more than one level in our response variable, depression level, a multinomial model may be appropriate for this data, where $$Y_i \sim Categorial(\pi_{i(rarely)}, \pi_{i(little)}, \pi_{i(moderate)}, \pi_{i(most)})$$ Our reference category for $Y_i$ is "(1) Rarely or None at All", while our reference category for $X_i$ is generation 2. The model being fit for our parameters of interest is:
+
+$$ log \left(\frac{\pi_{i(little)}}{\pi_{i(rarely)}} \right) = \beta_{0(little)} + \beta_{1(little)}Gen_3 + \beta_{2(little)}Gen_4$$
+$$ log \left(\frac{\pi_{i(moderate)}}{\pi_{i(rarely)}} \right) = \beta_{0(moderate)} + \beta_{1(moderate)}Gen_3 + \beta_{2(moderate)}Gen_4 $$
+$$ log \left(\frac{\pi_{i(most)}}{\pi_{i(rarely)}} \right) = \beta_{0(most)} + \beta_{1(most)}Gen_3 + \beta_{2(most)}Gen_4 $$  
+
+For a multinomial model, we will suppose we have an unordered categorical variable $Y_i$ which has J possible levels. We let $P(Y_i = j) = \pi_j$, where $j = 1,...,J$ and $\pi_1 + \pi_2 + ... + \pi_j = 1$. Thus, a multinomial model is used when our response variable has more than two levels, where we are comparing each level to some baseline, reference level. Because we have more than two levels and we are comparing each level to a baseline, we will be examining the log relative risk in the multinomial model, where the log relative risk of level j versus level J is given by $log \left( \frac{\pi_{ij}}{\pi_{iJ}} \right)$, where $Y_i$, $i = 1,...,n$, has J levels and $j = 1,...,J$.
+
+After fitting our model to determine our $\beta$ coefficients, we can write down our fitted model:
+
+$$ log \left(\frac{\hat{\pi}_{i(little)}}{\hat{\pi}_{i(rarely)}} \right) = -0.665 + 0.130Gen_3 + 0.024Gen_4$$
+$$ log \left(\frac{\hat{\pi}_{i(moderate)}}{\hat{\pi}_{i(rarely)}} \right) = -2.366 + 0.475Gen_3 + 0.483Gen_4 $$
+$$ log \left(\frac{\hat{\pi}_{i(most)}}{\hat{\pi}_{i(rarely)}} \right) = -3.422 + 0.632Gen_3 + 0.323Gen_4 $$
+
+```{r model1-copy, warning = FALSE, message = FALSE, echo = FALSE, include = FALSE}
+dep_model = multinom(Depressed ~ as.factor(GEN_R), data = subset)
+df <- coef(dep_model)
+```
+
+The table below (Table 2.2) displays the coefficients for the fitted model.
+
+```{r coefs-model1, echo = FALSE}
+knitr::kable(df, col.names = c("Intercept", "Generation 3", "Generation 4"), 
+             caption = "Table 2.2: Depression Model Coefficients")
+```
+
+For an example of what our model is saying, let us examine the log relative risk of an individual in generation 3 being depressed "a moderate amount of the time" versus "rarely or none of the time". Since we are examining generation 3, the $\beta$ coefficient for generation 4 falls out of the model. Thus, we can say that the log relative risk of an individual from generation 3 versus an individual from generation 2 being depressed a moderate amount of the time versus rarely or none of the time is -2.79. 
+
+$$ log \left(\frac{\hat{\pi}_{i(most)}}{\hat{\pi}_{i(rarely)}} \right) = -3.422 + 0.632(1) + 0.323(0) = -2.79 $$
+
+### Section 2.3.3: Visualizing the Model: Depressed by Generation  
+
+The plot below (Figure 2.2) describes the relationship between each of our depression levels and each generation. While there appears to be generally similar results across each generation, there is a slight peak in generation 2 in the "rarely or none of the time" category, and a slight peak in generation 3 in the "most or all of the time" category--this aligns with what we saw in the bar graph earlier.
+
+```{r plot, warning = FALSE, message = FALSE, echo = FALSE}
+plot_probsMultinom <- function(xvar , model, xname ){
+  xpart <- data.frame("GEN_R" = c(unique(xvar)))
+  names(xpart) <- xname
+  pp.xpart <- cbind(xpart, predict(model, newdata = xpart,
+                                   type = "probs", se = TRUE))
+  library(reshape2)
+  lpp <- melt(pp.xpart, id.vars = c(xname), value.name = "probability")
+  ggplot(lpp, aes(x = GEN_R, y = probability)) +
+    geom_line(color = "cadetblue4") + 
+    facet_grid(variable~., scales = "free") +
+    theme(axis.text=element_text(size=14), axis.title=element_text(size=14), 
+          legend.title = element_text(size = 14), 
+          legend.text = element_text(size = 14))+ylim(0,0.75) +
+    theme_light() 
+}
+```
+
+```{r plot-model1, echo = FALSE, warning = FALSE, message = FALSE}
+plot_probsMultinom(x = subset$GEN_R, model = dep_model, xname = "GEN_R") +
+  labs(title = "Figure 2.2: Probability of Depression by Generation", 
+       x = "Generation", y = "Probability")
+```
+
+## Section 2.4: Felt Hopeful
+
+### Section 2.4.1: Visualizing the Relationship: Hopeful by Generation
+
+The bar graph below (Figure 2.3) shows how often individuals felt hopeful about the future by generation, where (1) corresponds to "Rarely or none of the time", (2) corresponds to "A little of the time", (3) corresponds to "A moderate amount of the time", and (4) corresponds to "Most or all of the time". It appears that most people felt hopeful most of the time, while the least people felt hopeful rarely. It also appears that in the lowest category of hopeful, generation 2 is the most prevalent, and in the highest category of hopeful, generation 4 is the most prevalent. 
+
+```{r plot-prop-hopeful, warning = FALSE, message = FALSE, echo = FALSE}
+ggplot(data = subset, aes(x = Hopeful,  group = factor(GEN_R))) + 
+    geom_bar(aes(y = ..prop.., fill = factor(GEN_R)), stat = "count", 
+             position = position_dodge()) +
+  scale_x_discrete(labels = c("1", "2", "3", "4")) +
+  scale_fill_manual(name = "Generation",
+                    values = c("2" = "cadetblue1", "3" = "cadetblue3", 
+                               "4" =" cadetblue4")) +
+  labs(title = "Figure 2.3: Hopeful Level by Generation (Proportion)", 
+       x = "Hopeful Level (where 1 is rarely and 4 is most of the time)", 
+       y = "Proportion") +
+  theme_light()
+```
+
+### Section 2.4.2: Exploring the Model: Hopeful by Generation
+
+Now that we have visualized the relationship between generation and hopefulness, let us fit an appropriate model to explore that relationship further. Because we have more than one level in our response variable, hopeful level, a multinomial model may be appropriate for this data, where $$Y_i \sim Categorial(\pi_{i(rarely)}, \pi_{i(little)}, \pi_{i(moderate)}, \pi_{i(most)})$$ Our reference category for $Y_i$ is "(1) Rarely or None at All", while our reference category for $X_i$ is generation 2. The model being fit for our parameters of interest is:
+
+$$ log \left(\frac{\pi_{i(little)}}{\pi_{i(rarely)}} \right) = \beta_{0(little)} + \beta_{1(little)}Gen_3 + \beta_{2(little)}Gen_4$$
+$$ log \left(\frac{\pi_{i(moderate)}}{\pi_{i(rarely)}} \right) = \beta_{0(moderate)} + \beta_{1(moderate)}Gen_3 + \beta_{2(moderate)}Gen_4 $$
+$$ log \left(\frac{\pi_{i(most)}}{\pi_{i(rarely)}} \right) = \beta_{0(most)} + \beta_{1(most)}Gen_3 + \beta_{2(most)}Gen_4 $$  
+
+Refer to section 2.3.2 for a further understanding of the multinomial model. 
+
+After fitting our model to determine our $\beta$ coefficients, we can write down our fitted model:
+
+$$ log \left(\frac{\hat{\pi}_{i(little)}}{\hat{\pi}_{i(rarely)}} \right) = 0.227 + 0.862Gen_3 + 0.855Gen_4$$
+$$ log \left(\frac{\hat{\pi}_{i(moderate)}}{\hat{\pi}_{i(rarely)}} \right) = 1.091 + 0.655Gen_3 + 1.138Gen_4 $$
+$$ log \left(\frac{\hat{\pi}_{i(most)}}{\hat{\pi}_{i(rarely)}} \right) = 1.415 + 0.815Gen_3 + 1.352Gen_4 $$
+
+```{r model2, warning = FALSE, message = FALSE, echo = FALSE, include = FALSE}
+hope_model = multinom(Hopeful ~ as.factor(GEN_R), data = subset)
+df2 <- coef(hope_model)
+```
+
+The table below (Table 2.3) displays the coefficients for the fitted model.
+
+```{r coefs-model2, echo = FALSE}
+knitr::kable(df2, col.names = c("Intercept", "Generation 3", "Generation 4"), 
+             caption = "Table 2.3: Hopeful Model Coefficients")
+```
+
+For an example of what our model is saying, let us examine the log relative risk of an individual in generation 3 being hopeful "a moderate amount of the time" versus "rarely or none of the time". Since we are examining generation 3, the $\beta$ coefficient for generation 4 falls out of the model. Thus, we can say that the log relative risk of an individual from generation 3 versus an individual from generation 2 being hopeful about the future a moderate amount of the time versus rarely or none of the time is 1.746. 
+
+$$ log \left(\frac{\hat{\pi}_{i(moderate)}}{\hat{\pi}_{i(rarely)}} \right) = 1.091 + 0.655(1) + 1.138(0) = 1.746$$
+
+### Section 2.4.3: Visualizing the Model: Hopeful by Generation  
+
+The plot below (Figure 2.4) describes the relationship between each of our hopeful levels and each generation (where the bottom graph corresponds to "response not codable"). While there appears to be generally similar results across each generation, there is a slight peak in generation 2 in the "rarely or none of the time" category, and a slight peak in generation 4 in the "most or all of the time" category--this aligns with what we saw in the bar graph. 
+
+```{r plot-model2, echo = FALSE, warning = FALSE, message = FALSE}
+plot_probsMultinom(x = subset$GEN_R, model = hope_model, xname = "GEN_R") +
+  labs(title = "Figure 2.4: Probability of Hopeful by Generation", 
+       x = "Generation", y = "Probability")
+```
+
+## Section 2.5: Felt Lonely
+
+### Section 2.5.1: Visualizing the Relationship: Lonely by Generation
+
+The bar graph below (Figure 2.5) shows how often individuals felt lonely by generation, where (1) corresponds to "Rarely or none of the time", (2) corresponds to "A little of the time", (3) corresponds to "A moderate amount of the time", and (4) corresponds to "Most or all of the time". It appears that most people felt lonely rarely, while the least people felt lonely most of the time. It also appears that in the lowest category of loneliness, generation 2 is the most prevalent, and in the highest category of loneliness, generation 4 is the most prevalent. 
+
+```{r plot-prop-lonely, warning = FALSE, message = FALSE, echo = FALSE}
+ggplot(data = subset, aes(x = Lonely,  group = factor(GEN_R))) + 
+    geom_bar(aes(y = ..prop.., fill = factor(GEN_R)), stat = "count", 
+             position = position_dodge()) +
+  scale_x_discrete(labels = c("1", "2", "3", "4")) +
+  scale_fill_manual(name = "Generation",
+                    values = c("2" = "cadetblue1", "3" = "cadetblue3", 
+                               "4" =" cadetblue4")) +
+  labs(title = "Figure 2.5: Lonely Level by Generation (Proportion)", 
+       x = "Lonely Level (where 1 is rarely and 4 is most of the time)", 
+       y = "Proportion") +
+  theme_light()
+```
+
+### Section 2.5.2: Exploring the Model: Lonely by Generation
+
+Now that we have visualized the relationship between generation and loneliness, let us fit an appropriate model to explore that relationship further. Because we have more than one level in our response variable, lonely level, a multinomial model may be appropriate for this data, where $$Y_i \sim Categorial(\pi_{i(rarely)}, \pi_{i(little)}, \pi_{i(moderate)}, \pi_{i(most)})$$ Our reference category for $Y_i$ is "(1) Rarely or None at All", while our reference category for $X_i$ is generation 2. The model being fit for our parameters of interest is:
+
+$$ log \left(\frac{\pi_{i(little)}}{\pi_{i(rarely)}} \right) = \beta_{0(little)} + \beta_{2(little)}Gen_3 + \beta_{3(little)}Gen_4$$
+$$ log \left(\frac{\pi_{i(moderate)}}{\pi_{i(rarely)}} \right) = \beta_{0(moderate)} + \beta_{2(moderate)}Gen_3 + \beta_{3(moderate)}Gen_4 $$
+$$ log \left(\frac{\pi_{i(most)}}{\pi_{i(rarely)}} \right) = \beta_{0(most)} + \beta_{2(most)}Gen_3 + \beta_{3(most)}Gen_4 $$  
+
+Refer to section 2.3.2 for a further understanding of the multinomial model. 
+
+After fitting our model to determine our $\beta$ coefficients, we can write down our fitted model:
+
+$$ log \left(\frac{\hat{\pi}_{i(little)}}{\hat{\pi}_{i(rarely)}} \right) = -0.987 - 0.010Gen_3 + 0.126Gen_4$$
+$$ log \left(\frac{\hat{\pi}_{i(moderate)}}{\hat{\pi}_{i(rarely)}} \right) = -2.171 + 0.236Gen_3 + 0.198Gen_4 $$
+$$ log \left(\frac{\hat{\pi}_{i(most)}}{\hat{\pi}_{i(rarely)}} \right) = -3.174 + 0.156Gen_3 + 0.582Gen_4 $$
+
+```{r model3, warning = FALSE, message = FALSE, echo = FALSE, include = FALSE}
+lone_model = multinom(Lonely ~ as.factor(GEN_R), data = subset)
+df3 <- coef(lone_model)
+```
+
+The table below (Table 2.4) displays the coefficients for the fitted model.
+
+```{r coefs-model3, echo = FALSE}
+knitr::kable(df3, col.names = c("Intercept", "Generation 3", "Generation 4"), 
+             caption = "Table 2.4: Lonely Model Coefficients")
+```
+
+For an example of what our model is saying, let us examine the log relative risk of an individual in generation 3 being lonely "a moderate amount of the time" versus "rarely or none of the time". Since we are examining generation 3, the $\beta$ coefficients for generation 2 and generation 4 fall out of the model. Thus, we can say that the log relative risk of an individual from generation 3 versus an individual from generation 2 being lonely a moderate amount of the time versus rarely or none of the time is -1.935. 
+
+$$ log \left(\frac{\hat{\pi}_{i(moderate)}}{\hat{\pi}_{i(rarely)}} \right) = -2.171 + 0.236(1) + 0.198(0) = -1.935$$
+
+### Section 2.5.3: Visualizing the Model: Lonely by Generation  
+
+The plot below (Figure 2.6) describes the relationship between each of our lonely levels and each generation (where the bottom graph corresponds to "response not codable"). While there appears to be generally similar results across each generation, there is a slight peak in generation 2 in the "rarely or none of the time" category, and a slight peak in generation 4 in the "most or all of the time" and "moderate amount of time" categories--this aligns with what we saw in the bar graph. 
+
+```{r plot-model3, echo = FALSE, warning = FALSE, message = FALSE}
+plot_probsMultinom(x = subset$GEN_R, model = lone_model, xname = "GEN_R") +
+  labs(title = "Figure 2.6: Probability of Lonely by Generation", 
+       x = "Generation", y = "Probability") +
+  theme_light()
+```
+
+## Section 2.6: Conclusion
+
+The exploration of well-being by generation above gives us both an understanding of the general trend of well-being across all individuals, while also distinguishing between differences by generation. 
+
+To begin, we saw that, overall, individuals are most likely to rate themselves as depressed rarely or none of the time, followed by a little of the time, a moderate amount of the time, and finally most or all of the time. Compared to generation 2, generation 3 and generation 4 were both more likely to rate themselves depressed more often than rarely or none of the time--which may suggest that generation 3 and 4 were slightly more depressed than generation 2. Among all generations, generation 3 was most likely to rate themselves as depressed most or all of the time. Thus, in our exploration of depression by generation, our results suggest that generation 2 is the least depressed, followed by generation 4, and generation 3 is the most depressed. 
+
+Moving on to our exploration of individual being hopeful about the future, overall, individuals are most likely to rate themselves as hopeful about the future most or all of the time, followed by a moderate amount of the time, a little of the time, and finally rarely or none of the time. Compared to generation 2, generation 3 and generation 4 were both more likely to rate themselves hopeful about the future more often than rarely or none of the time--which may suggest that generation 3 and generation 4 were slightly more hopeful about the future than generation 2. Among all generations, generation 4 was most likely to rate themselves as hopeful about the future most or all of the time. Thus, in our exploration of hopeful about the future by generation, our results suggest that generation 4 is the most hopeful about the future, followed by generation 3, and generation 2 is the least hopeful about the future. 
+
+Finally, in our exploration of loneliness, individuals are most likely to rate themselves as lonely rarely or none of the time, followed by a little of the time, a moderate amount of the time, and finally most or all of the time. Generally, compared to generation 2, generation 3 and generation 4 were both more likely to rate themselves as lonely more often than rarely or none of the time--which may suggest that generation 3 and generation 4 were slightly more lonely than generation 2. The only exception to this trend is seen among generation 3, where they are less likely to rate themselves as lonely a little of the time versus rarely of none of the time than generation 2 is. Among all generations, generation 4 was most likely to rate themselves as lonely most or all of the time. Thus, in our exploration of loneliness by generation, our results suggest that generation 4 is the most lonely, followed by generation 3, and generation 2 is the least lonely.
+
+# Section 3: Relationship Status
+
+## Section 3.1: Introducion to Mental Health and Well-being by Relationship Status
+
+We have looked at how certain characteristics change through the generations--these characteristics being if an individual felt depressed, hopeful about the future, and/or lonely. Now, we want to explore the relationship between these same characteristics and whether or not an individual is in a relationship, or is a victim of a broken relationship. For now, we are going to include individuals who are "living with a partner as though married" and "married" in one category called **In Relationship**, and "stopped living with a partner as though married," "separated," and "divorced" in one category called **Broken Relationship**, and "single, never married," "widowed," and "UNDOCUMENTED CODE" will not be included. We are going to use the variable **BG011R8** on page 41 in the Codebook.
+
+```{r subset1, warning = FALSE, message = FALSE, echo = FALSE}
+myVars1 <- c("HF042R8", "HF044R8", "HF050R8", "BG011R8", "GEN_R")
+subset1 <- da22100.0002[myVars1] 
+subset1 <- na.omit(subset1)
+
+subset1 <- subset1 %>%
+filter(HF042R8 != '(9) Response not codable' & 
+         HF044R8 != '(9) Response not codable' & 
+         HF050R8 != '(9) Response not codable' & 
+         BG011R8 != '(7) Single, never married' & 
+         BG011R8 != '(9) UNDOCUMENTED CODE' & BG011R8 != '(4) Widowed')
+
+levels(subset1$BG011R8)[levels(subset1$BG011R8)==
+                          "(1) Married"] <- "In Relationship"
+levels(subset1$BG011R8)[levels(subset1$BG011R8)==
+                          "(5) Living with a partner as though married"] <-
+  "In Relationship"
+levels(subset1$BG011R8)[levels(subset1$BG011R8)==
+                    "(6) Stopped living with a partner as though married"] <-
+  "Broken Relationship"
+levels(subset1$BG011R8)[levels(subset1$BG011R8)==
+                          "(2) Separated"] <-"Broken Relationship"
+levels(subset1$BG011R8)[levels(subset1$BG011R8)=="(3) Divorced"] <-
+  "Broken Relationship"
+
+subset1$BG011R8 <- factor(subset1$BG011R8)
+
+subset1 <- subset1 %>%
+  rename(
+    Depressed = HF042R8,
+    Lonely = HF050R8,
+    Hopeful = HF044R8,
+    Relationship = BG011R8
+  )
+
+levels(subset1$Depressed)[levels(subset1$Depressed) == 
+                            "(1) Rarely or none of the time"] <- "(1)"
+levels(subset1$Depressed)[levels(subset1$Depressed) == 
+                            "(2) A little of the time"] <- "(2)"
+levels(subset1$Depressed)[levels(subset1$Depressed) ==
+                            "(3) A moderate amount of the time"] <- "(3)"
+levels(subset1$Depressed)[levels(subset1$Depressed) == 
+                            "(4) Most or all of the time"] <- "(4)"
+
+levels(subset1$Hopeful)[levels(subset1$Hopeful) == 
+                          "(1) Rarely or none of the time"] <- "(1)"
+levels(subset1$Hopeful)[levels(subset1$Hopeful) == 
+                          "(2) A little of the time"] <- "(2)"
+levels(subset1$Hopeful)[levels(subset1$Hopeful) == 
+                          "(3) A moderate amount of the time"] <- "(3)"
+levels(subset1$Hopeful)[levels(subset1$Hopeful) == 
+                          "(4) Most or all of the time"] <- "(4)"
+
+levels(subset1$Lonely)[levels(subset1$Lonely) == 
+                         "(1) Rarely or none of the time"] <- "(1)"
+levels(subset1$Lonely)[levels(subset1$Lonely) == 
+                         "(2) A little of the time"] <- "(2)"
+levels(subset1$Lonely)[levels(subset1$Lonely) == 
+                         "(3) A moderate amount of the time"] <- "(3)"
+levels(subset1$Lonely)[levels(subset1$Lonely) == 
+                         "(4) Most or all of the time"] <- "(4)"
+```
+
+## Section 3.2: Basic Logistic Model: Relationship Status by Depressed, Lonely, and Hopeful
+
+Before diving into any more complex models, let's first look at a basic logistic regression model, where $Y_i \sim Bernoulli(\pi_i)$, and with our binary variable, "Relationship" being our response variable, and our factored variables, "Depressed", "Lonely", and "Hopeful" being our explanatory variables. The model we are fitting will be:
+
+$$log \left(\frac{\pi_i}{1-\pi_i} \right) = \beta_0 + \beta_1Depressed(2)_i + \beta_2Depressed(3)_i + \beta_3Depressed(4)_i + \beta_4Lonely(2)_i$$
+$$+ \beta_5Lonely(3)_i + \beta_6Lonely(4)_i + \beta_7Hopeful(2)_i + \beta_8Hopeful(3)_i + \beta_9Hopeful(4)_i$$
+
+
+where our reference for each category is the individual being depressed, hopeful, or lonely "rarely or none at all", and the reference for our $Y_i$ is being in a relationship.
+
+For a logistic model, we let $Y_i$ be a binary random variable where $P(Y_i = 1) = \pi_i$. Then $Y_i$ is a Bernoulli variable with two possible outcomes and we can use a logistic model. For this model, we are examining the log odds, where the log odds are given by $log \left( \frac{\pi_i}{1-\pi_i} \right)$, where $\pi_i$ is the probability of success. 
+
+```{r logistic, warning = FALSE, message = FALSE, echo = FALSE, include = FALSE}
+log_mod <- glm(Relationship ~ Depressed + Lonely + Hopeful, data = subset1, 
+               family = "binomial")
+df4 <- coef(log_mod)
+```
+
+After fitting our model, our final model for predicting whether or not an individual is in a relationship based on their response to feeling depressed, hopeful, or lonely is:
+
+$$log \left(\frac{\hat{\pi}_i}{1-\hat{\pi}_i} \right) = -2.176 + 0.145Depressed(2)_i + 0.423Depressed(3)_i + 0.589Depressed(4)_i + 0.765Lonely(2)_i$$
+$$+ 1.316Lonely(3)_i + 1.747Lonely(4)_i - 0.428Hopeful(2)_i - 0.473Hopeful(3)_i - 0.588Hopeful(4)_i$$
+
+The table below (Table 3.1) displays the coefficients for our fitted model.
+
+```{r table-log-model, echo = FALSE}
+knitr::kable(df4, col.names = c("Coefficients"), 
+             caption = "Table 3.1: Relationship Logistic Model Coefficients")
+```
+
+Just to look at an example of what this model tells us, this tells us that the log odds of being in a broken relationship compared to being in a relationship increases by 0.589 when an individual responds that they are depressed "most or all of the time" rather than "rarely or none of the time". 
+
+Further, let us examine the log odds of an individual being in a broken relationship, rather than being in a relationship if they responded that they are depressed "a little of the time", that they were lonely "most or all of the time", and hopeful "a little of the time".
+
+$$log \left(\frac{\hat{\pi}_i}{1-\hat{\pi}_i} \right) = -2.176 + 0.145(1) + 0.423(0) + 0.589(0) + 0.765(0)$$
+$$+ 1.316(0) + 1.747(1) - 0.428(1) - 0.473(0) - 0.588(0) = -0.712$$
+
+Because we have a negative log odds, it is more likely for an individual who responded that they are depressed "a little of the time", that they were lonely "most or all of the time", and hopeful "a little of the time" to be in a relationship than in a broken relationship. 
+
+
+```{r calc, echo = FALSE, eval = FALSE}
+-2.176+0.145+1.747-0.428
+```
+
+```{r subset2, echo = FALSE}
+subset2 <- subset1
+levels(subset2$Relationship)[levels(subset2$Relationship) == 
+                               "In Relationship"] <- "0"
+levels(subset2$Relationship)[levels(subset2$Relationship) == 
+                               "Broken Relationship"] <- "1"
+```
+
+## Section 3.3: Decision Tree: Relationship Status by Depressed, Lonely, and Hopeful
+
+Now that we have fit a basic logisitic regression model, let us try to visual the relationship between relationship and our predictors better by fitting a classification decision tree.
+
+Decision trees can be used both in questions involving regression and in questions involving classification. For our particular problem, we will be examining a classification decision tree, in which it is being used to predict a qualitative response rather than a quantitative one. We will predict that each observation belongs to the most commonly occurring class of the training observations in a given region, where we use recursive binary splitting to grow the tree. Instead of using the residual sum of squares, we can use the Gini index, where
+
+$$G = \sum_{k=1}^{K}\hat{p}_{mk}(1-\hat{p}_{mk})$$
+
+This is a measure of total variance across the K classes. 
+
+```{r tree, warning = FALSE, message = FALSE, echo = FALSE, fig.asp = 1.6}
+set.seed(7)
+
+subset_cv <- vfold_cv(subset2, v = 5)
+
+tree_spec <- decision_tree(
+  cost_complexity = tune(),
+  tree_depth = 10,
+  mode = "classification") %>%
+  set_engine("rpart")
+
+grid <- expand_grid(cost_complexity = seq(0.01, 0.05, by = 0.01))
+model <- tune_grid(tree_spec,
+                   Relationship ~ .,
+                   grid = grid,
+                   resamples = subset_cv,
+                   metrics = metric_set(gain_capture, accuracy))
+
+best <- model %>%
+  select_best(metric = "gain_capture") %>%
+  pull()
+
+final_spec <- decision_tree(
+  cost_complexity = best, 
+  tree_depth = 4,
+  mode = "classification") %>% 
+  set_engine("rpart")
+final_model1 <- fit(final_spec,
+                   Relationship ~ .,
+                   data = subset2)
+```
+
+```{r plot-tree, echo = FALSE, message = FALSE, warning = FALSE}
+rpart.plot(final_model1$fit,
+           roundint = FALSE, tweak = 1.3,
+           main = "Figure 3.1: Relationship Status by Depressed, Hopeful, 
+           and Lonely Decision Tree",
+           box.palette = c("#33CCCC", "#66FFFF"),
+           branch.lty = 3, fallen.leaves = FALSE, split.yshift = -2, cex = 0.4,
+           sub = "where 0 = In Relationship, and 1 = Broken Relationship")
+```
+
+
+```{r subset3, warning = FALSE, message = FALSE, echo = FALSE}
+myVars3 <- c("HF042R8", "HF044R8", "HF050R8", "BG011R8", "GEN_R")
+subset3 <- da22100.0002[myVars3] 
+subset3 <- na.omit(subset3)
+
+subset3 <- subset3 %>%
+filter(HF042R8 != '(9) Response not codable' & 
+         HF044R8 != '(9) Response not codable' & 
+         HF050R8 != '(9) Response not codable' & 
+         BG011R8 != '(7) Single, never married' & 
+         BG011R8 != '(9) UNDOCUMENTED CODE' & BG011R8 != '(4) Widowed')
+
+levels(subset3$BG011R8)[levels(subset3$BG011R8)==
+                          "(1) Married"] <- "In Relationship"
+levels(subset3$BG011R8)[levels(subset3$BG011R8)==
+                          "(5) Living with a partner as though married"] <-
+  "In Relationship"
+levels(subset3$BG011R8)[levels(subset3$BG011R8)==
+                    "(6) Stopped living with a partner as though married"] <-
+  "Broken Relationship"
+levels(subset3$BG011R8)[levels(subset3$BG011R8)==
+                          "(2) Separated"] <-"Broken Relationship"
+levels(subset3$BG011R8)[levels(subset3$BG011R8)=="(3) Divorced"] <-
+  "Broken Relationship"
+
+subset3$BG011R8 <- factor(subset3$BG011R8)
+
+subset3 <- subset3 %>%
+  rename(
+    Depressed = HF042R8,
+    Lonely = HF050R8,
+    Hopeful = HF044R8,
+    Relationship = BG011R8
+  )
+```
+
+```{r heatmap1, warning = FALSE, message = FALSE, echo = FALSE, fig.asp = 1.6}
+set.seed(7)
+
+subset_cv1 <- vfold_cv(subset3, v = 5)
+
+tree_spec <- decision_tree(
+  cost_complexity = tune(),
+  tree_depth = 10,
+  mode = "classification") %>%
+  set_engine("rpart")
+
+grid1 <- expand_grid(cost_complexity = seq(0.01, 0.05, by = 0.01))
+model1 <- tune_grid(tree_spec,
+                   Relationship ~ .,
+                   grid = grid1,
+                   resamples = subset_cv1,
+                   metrics = metric_set(gain_capture, accuracy))
+
+best <- model1 %>%
+  select_best(metric = "gain_capture") %>%
+  pull()
+
+final_spec1 <- decision_tree(
+  cost_complexity = best, 
+  tree_depth = 4,
+  mode = "classification") %>% 
+  set_engine("rpart")
+final_model2 <- fit(final_spec1,
+                   Relationship ~ .,
+                   data = subset3)
+```
+
+```{r heatmap, echo = FALSE, warning = FALSE, message = FALSE}
+final_model2 %>%
+  predict(new_data = subset3) %>%
+  bind_cols(subset3) %>%
+  conf_mat(truth = Relationship, estimate = .pred_class) %>%
+  autoplot(type = "heatmap") +
+  labs(title = "Table 3.2: Confusion Matrix for Relationship Status") +
+  scale_fill_gradient(low = "lightblue1", high = "lightblue4")
+```
+
+After building our decision tree, one thing that is clear is that there is a much higher chance overall that individuals are in a relationship than a broken relationship. Thus, it may be difficult to draw accurate predictions due to the small number of individuals who are actually in a broken relationship. However, at least based on the model that we do have, $1268 + 13 = 1281$ were predicted correctly, while $143 + 8 = 151$ were predicted incorrectly. This leaves us with a classification error rate of $\frac{151}{1281} \times 100 = 11.79$%. While this seems very good, it may simply be due to the very small number of individuals who are actually in a broken relationship.
+
+To confirm our suspicions that there is a small number of individuals who are in a broken relationship, let's look at the table below (Table 3.3), which displays the counts, by generation, of individuals in a broken relationship and in a relationship. For individuals in a relationship we have $6 + 296 + 564 + 410 = 1276$ individuals, while for individuals in a broken relationship we have $0 + 32 + 95 + 29 = 156$ individuals. Thus, 89.11% of our individuals are in a relationship, while 10.89% of our individuals are in a broken relationship. 
+
+```{r table2, echo = FALSE}
+knitr::kable(table(subset1$GEN_R, subset1$Relationship), 
+             caption = "Table 3.3: Relationship Status Count by Generation")
+```
+
+## Section 3.4: Conclusion
+
+Due to the nature of the data, where many more individuals were in a relationship than in a broken relationship, it may be difficult to make accurate conclusions based on the above analysis. However, there are a few clear conclusions based on the model fit and the decision tree.
+
+Based on the model fit, it is clear that, regardless of well-being status, individuals are much more likely to be in a relationship than in a broken relationship. Further, those who rate themselves as depressed more of the time and lonely more of the time are more likely to be in a broken relationship than in a relationship. Finally, the more often an individual felt hopeful about the future, the more likely they are to be in a relationship than in a broken relationship. 
+
+Finally, based on the decision tree, those who are hopeful less often than most or all of the time, are lonely most or all of the time, and are in generation 4 are most likely to be in a broken relationship. 
+
+# Section 4: Women Working
+
+## Sectiono 4.1: Women Working by Religious Influence
+
+We are going to start exploring random effects introduced by individual and generation, where the group effect is generation and the individual effects are the individual people in the study. The relationship we would like to look at is whether or not someone agrees with the statement "the increase in the number of women who work has led to a decline in the quality of family life" (variable **OP165R8** in the codebook, page 177) is influenced by whether or not someone agrees with the statement "religion is the most important influence" (variable **OP166R8** in the codebook, page 181). Thus, the effect of interest is whether or not someone agrees with the statement "the increase in the number of women who work has led to a decline in the quality of family life". 
+
+As we saw before, generation 1 is too small to include in the analysis, so we will remove generation 1 from our subset of data.
+
+```{r remove-gen-1, echo = FALSE}
+myVars4 <- c("OP165R8", "OP166R8", "ID", "GEN_R")
+subset4 <- da22100.0002[myVars4] 
+subset4 <- na.omit(subset4)
+
+subset4 <- subset4 %>%
+  rename(
+    WomenWorking = OP165R8,
+    Religion = OP166R8,
+    Individual = ID,
+    Generation = GEN_R
+  )
+
+subset4 <- subset4[-which(subset4$WomenWorking == '(9) Response not codable'), ]
+subset4 <- subset4[-which(subset4$Religion == '(9) Response not codable'), ]
+subset4 <- subset4[-which(subset4$Generation == '1'), ]
+subset4$WomenWorking <- ifelse((subset4$WomenWorking == 
+                                 levels(subset4$WomenWorking)[1]|subset4$WomenWorking 
+                               == levels(subset4$WomenWorking)[2]),1,0)
+```
+
+### Section 4.1.1: Visualizing the Relationship: Women Working by Generation
+
+The bar graph below displays the proportion of individual who agree with the statement "the increase in the number of women who work has led to a decline in the quality of family life", by generation. It appears that generally, those in earlier generations (such as generation 2) agree more strongly, while those in later generations disagree more strongly (such as generation 4). Thus, there is clearly a relationship between our response and generation. 
+
+```{r plot-prop1, warning = FALSE, message = FALSE, echo = FALSE}
+ggplot(data = subset4, aes(x = factor(WomenWorking),  group = factor(Generation))) + 
+    geom_bar(aes(y = ..prop.., fill = factor(Generation)), stat = "count", 
+             position = position_dodge()) +
+  scale_x_discrete(labels = c("0" = "Disagree", "1" = "Agree")) +
+  scale_fill_manual(name = "Generation",
+                    values = c("2" = "cadetblue1", "3" = "cadetblue3",
+                               "4" =" cadetblue4")) +
+  labs(title = "Figure 4.1: Women Working Agreement Level by Generation (Proportion)", 
+       x = "Agreement Level", 
+       y = "Proportion") +
+  theme_light()
+```
+
+### Section 4.1.2: Exploring the Model: Women Working by Religious Influence
+
+Now, let us fit our model containing a random effect for generation and a fixed effect for religious influence:
+
+$$ log \left( \frac{\pi_{ij}}{1-\pi_{ij}} \right) = \beta_0 + \beta_1ReligionAgree_i  + \beta_2ReligionDisagree_i$$ 
+$$ + \beta_3ReligionStronglyDisagree_i + g_j + \epsilon_{ij} $$
+$$ \epsilon_{ij} \sim N(0,\sigma^2)$$
+$$ g_j \sim N(0,\tau^2)$$
+
+For a random effects model, we notice that there are other factors that might affect our response variable apart from the effect of interest--namely individual variation and group variation. In order to respond to this variation, we introduce two error terms to absorb the influence of the individual and group variation. For our particular question, the group effect would be generation and the individual affect would be the individual people who responded to the survey. For each generation, we get a slightly different intercept due to the variation across generation. This helps to more accurately represent any potential variation. 
+
+After fitting the model, we have:
+
+$$ log \left( \frac{\hat{\pi}_{ij}}{1-\hat{\pi}_{ij}} \right) = 1.316 + \hat{g}_j - 0.838ReligionAgree_i - 1.731ReligionDisagree_i $$
+$$ - 2.283ReligionStronglyDisagree_i $$
+
+The table below (Table 4.1) displays the intercepts for generation, where the intercept for generation 2 is 1.638, 1.264 for generation 3, and 1.046 for generation 4.
+
+```{r model1, echo = FALSE}
+re_model <- glmer(WomenWorking ~ Religion + (1|Generation), data = subset4, 
+                family = "binomial")
+re_coefs <- data.frame(Generation = c(2, 3, 4),
+                       Intercept = c(1.6379, 1.2636, 1.0457))
+```
+
+```{r intercepts-table, echo = FALSE}
+knitr::kable(re_coefs, caption = "Table 4.1: Generation Intercepts")
+```
+
+Let's look at an example using this model. Let's say that an individual is in generation 4 and strongly disagrees that religion is the most important influence. Then, the model would look like:
+
+
+$$ log \left( \frac{\hat{\pi}_{ij}}{1-\hat{\pi}_{ij}} \right) = 1.046 - 0.838(0) - 1.731(0) - 2.283(1) = -1.237$$
+
+Thus, the log odds of a person agreeing that the increase in the number of women who work has led to a decline in the quality of family life if they strongly disagree with religion and are in generation 4 is -1.237, or a probability of 0.2250 (22.50%).
+
+## Section 4.2: Women Working by Religious Influence, Politics, and Education
+
+Now, instead of trying to predictor whether or not a person agrees with the statement "the increase in the number of women who work has led to a decline in the quality of family life" based only on their religious influence, let us also include the predictor for how someone responded to "on a scale from very liberal to very conservative, how would you rater your political views or opinions" (**PV002R8**, page 152) and the predictor for how someone responded to "women who want to remove the word 'obey' from the marriage service don't understand what it means to be a good wife" (**OP170R8**, page 181).
+
+As we saw before, generation 1 is too small to include in the analysis, so we will remove generation 1 from our subset of data. 
+
+```{r remove-gen-1-subset, echo = FALSE}
+myVars5 <- c("OP165R8", "OP166R8", "ID", "GEN_R", "PV002R8", "OP170R8")
+subset5 <- da22100.0002[myVars5] 
+subset5 <- na.omit(subset5)
+
+subset5 <- subset5 %>%
+  rename(
+    WomenWorking = OP165R8,
+    Religion = OP166R8,
+    Individual = ID,
+    Generation = GEN_R,
+    Politics = PV002R8, 
+    Obey = OP170R8
+  )
+
+subset5 <- subset5[-which(subset5$WomenWorking == '(9) Response not codable'), ]
+subset5 <- subset5[-which(subset5$Religion == '(9) Response not codable'), ]
+subset5 <- subset5[-which(subset5$Politics == '(9) Response not codable'), ]
+subset5 <- subset5[-which(subset5$Obey == '(9) Response not codable'), ]
+subset5 <- subset5[-which(subset5$Generation == '1'), ]
+subset5$WomenWorking <- ifelse((subset5$WomenWorking == 
+                                  levels(subset5$WomenWorking)[1]|subset5$WomenWorking 
+                                == levels(subset5$WomenWorking)[2]),1,0)
+```
+
+### Section 4.2.1: Visualizing the Relationship: Women Working by Religious Influence, Politics, and Education
+
+We would like to be able to consider our predictors as numeric, rather than categorical. Thus, we need to assure that there is a linear relationship between each of our predictors and how a person responded to the women working question. The figure below (Figure 4.2) explores the relationship between women working and politics, where it appears that as a person gets more liberal, they are less likely to agree with the women working statement. This is a linear relationship, and we can thus consider politics a numeric variable. 
+
+```{r mosaic-politics, echo = FALSE}
+subset5$Politics <- factor(subset5$Politics)
+
+mosaicplot(subset5$Politics ~ subset5$WomenWorking, xlab = "Politics", 
+           ylab = "WomenWorking",
+           main = "Figure 4.2: Relationship between Women Working and Politics", 
+           color = c("cadetblue2", "cadetblue4"), cex = 0.5)
+```
+
+The figure below (Figure 4.3) explores the relationship between women working and religion, where it appears that as a person is more influenced by religion, they are more likely to agree with the women working statement. This is a linear relationship, and we can thus consider religion a numeric variable. 
+
+```{r mosaic-religion, echo = FALSE}
+subset5$Religion <- factor(subset5$Religion)
+
+mosaicplot(subset5$Religion ~ subset5$WomenWorking, xlab = "Religion", 
+           ylab = "WomenWorking",
+           main = "Figure 4.3: Relationship between Women Working and Religion", 
+           color = c("cadetblue2", "cadetblue4"), cex = 0.5)
+```
+
+The figure below (Figure 4.4) explores the relationship between women working and obey, where it appears that as a person agrees more that the word 'obey' is part of being a good wife, they are more likely to agree with the women working statement. This is a linear relationship, and we can thus consider obey a numeric variable. 
+
+```{r mosaic-obey, echo = FALSE}
+subset5$Obey <- factor(subset5$Obey)
+
+mosaicplot(subset5$Obey ~ subset5$WomenWorking, xlab = "Obey", 
+           ylab = "WomenWorking",
+           main = "Figure 4.4: Relationship between Women Working and Obey", 
+           color = c("cadetblue2", "cadetblue4"), cex = 0.5)
+```
+
+Now that we are sure that all of our predictors have a linear relationship with women working, let us consider one further relationship--the relationship between religion and politics. Because it is often true that religion and politics are closely related, it may be that an interaction term should be added. The figure below (Figure 4.5) appears to display a linear relationship between politics and religion. Thus, we will add an interaction between the two predictors. We will also consider politics separately to examine that relationship closer. 
+
+```{r mosaic-randp, echo = FALSE}
+mosaicplot(subset5$Politics ~ subset5$Religion, xlab = "Politics", 
+           ylab = "Religion",
+           main = "Figure 4.5: Relationship between Religion and Politics", 
+           color = c("cadetblue2", "cadetblue4"), cex = 0.5)
+```
+
+### Section 4.2.2: Exploring the Model: Women Working by Religious Influence, Politics, and Education
+
+Now, let us fit our model containing a random effect for generation and a fixed effect for religious influence, political views, and obeying as a wife:
+
+$$ log \left( \frac{\pi_{ij}}{1-\pi_{ij}} \right) = \beta_0 + \beta_1(Politics\times Religion)_i + \beta_2Politics + \beta_3Obey_i + g_j + \epsilon_{ij} $$
+$$ \epsilon_{ij} \sim N(0,\sigma^2)$$
+$$ g_j \sim N(0,\tau^2)$$
+After fitting the model, we have:
+
+$$ log \left( \frac{\hat{\pi}_{ij}}{1-\hat{\pi}_{ij}} \right) = 0.241 + g_j - 0.133(Politics\times Religion)_i  + 0.736Politics_i - 0.503Obey_i$$
+
+The table below (Table 4.2) displays the intercepts for generation, where the intercept for generation 2 is 0.490, 0.225 for generation 3, and 0.007 for generation 4.
+
+```{r model1.1, echo = FALSE}
+ww_model <- glmer(WomenWorking ~ as.numeric(Religion) : as.numeric(Politics) +
+                   as.numeric(Politics) +
+                   as.numeric(Obey) + (1|Generation), data = subset5, 
+                 family = "binomial")
+ww_coefs <- data.frame(Generation = c(2, 3, 4),
+                       Intercept = c(0.490, 0.225, 0.007))
+```
+
+```{r intercepts-table2, echo = FALSE}
+knitr::kable(ww_coefs, caption = "Table 4.2: Generation Intercepts")
+```
+
+Let's look at an example using this model. Let's say that an individual is in generation 4, strongly disagrees that religion is the most important influence, is very liberal, and who strongly disagrees that the word 'obey' describes a good wife. Then, the model would look like:
+
+$$ log \left( \frac{\hat{\pi}_{ij}}{1-\hat{\pi}_{ij}} \right) = 0.007 - 0.133(4)  + 0.736(1) - 0.503(4) = -1.801$$
+
+Thus, the log odds of a person agreeing that the increase in the number of women who work has led to a decline in the quality of family life if they strongly disagree with religion and are very liberal and who strongly disagrees that the word 'obey' describes a good wife, and are in generation 4 is -1.801, or a probability of 0.1417 (14.17%).
+
+## Section 4.3: Conclusion
+
+While our predictors where of main interest to us in the above exploration into opinions on women working and the decline of family life, there is also an obvious relationship between these opinions and generation. Both the graphs made and the models fit show that generation 2 is most likely the agree that the amount of women working has led to a decline in family life, followed by generation 3, and generation 4 is least likely to agree. 
+
+In our exploration of how religious influence impacts these opinions, we saw that those who disagrees most strongly that religion was the most important influence were least likely to agree with the statement that women working has led to a decline in family life, while those who agreed most strongly that religion was the most important influence were most likely to agree that women working has led to a decline in family life. 
+
+After adding in our additional predictors, we see that those who agree most strongly that obeying your husband is part of being a good wife also agree most strongly that women working has led to a decline in family life. We also see that those who rated themselves as more liberal disagreed most strongly with women working leading to a decline in family life, while those who rated themselves as more conservative agreed most strongly that women working has led to a decline in family life. 
+
+# Section 5: Depression
+
+## Section 5.1: Introduction to Depression Level by Divorce, Politics, Religion, Income, and Health
+
+Now that we have done a few basic models exploring various relationships, we are going to return to the issue of predicting depression level. However, this time, we are going to include more than just generation in our model. The variables we are going to use to predict depression are an individuals response to "what was your total household income for last year" (**EL010R8**, page 206), "compared to people your own age, how would you rate your overall physical health at the present time" (**HF001R8**, page 300), discussed getting a divorce" (**ML012R8**, page 131), "rate your political views" (**PV002R8**, page 152), and how much they agree with "I don't have enough friends" (**WB093N8**, page 183). 
+
+```{r subset6, echo = FALSE}
+myVars6 <- c("HF042R8", "ML012R8", "WB093N8", "PV002R8", "EL010R8", "HF001R8")
+subset6 <- da22100.0002[myVars6] 
+subset6 <- na.omit(subset6)
+
+subset6 <- subset6 %>%
+  rename(
+    divorce = ML012R8,
+    politics = PV002R8,
+    friends = WB093N8,
+    depressed = HF042R8,
+    income = EL010R8, 
+    health = HF001R8
+  )
+
+subset6 <- subset6[-which(subset6$divorce == '(9) Response not codable'), ]
+subset6 <- subset6[-which(subset6$politics == '(9) Response not codable'), ]
+subset6 <- subset6[-which(subset6$income == '(99) UNDOCUMENTED CODE'), ]
+subset6 <- subset6[-which(subset6$friends == '(9) UNDOCUMENTED CODE'), ]
+```
+
+## Section 5.2: Visualizing the Relationship: Depression Level by Divorce, Politics, Religion, Income, and Health
+
+We want to look at these factor variables as numeric quantities. To do this, we first must assure that the relationship between depression and the various predictors is linear in nature. Thus, the below graphs (Figure 5.1 - Figure 5.5) examine the relationship between our predictors and average depression level for each level of our predictor. 
+
+The figure below (Figure 5.1) examines the relationship between how often a couple discussed divorce and their average depression level. It appears that as a couple discusses divorce more often, they were generally more depressed. This relationship appears to be linear as we can thus consider our divorce predictor as a numeric value. 
+
+```{r divorce-average-plot, echo = FALSE}
+divAv <- data.frame(divorce = c("1", "2", "3", "4", "5"),
+                  mean = with(subset6, tapply(as.numeric(depressed), 
+                                              as.numeric(divorce), mean)))
+
+ggplot(data = divAv, aes(x = as.numeric(divorce), y = as.numeric(mean))) +
+  geom_point(color = "cadetblue4") +
+  stat_smooth(method = "lm", formula = y ~ x, color = "cadetblue4",
+              alpha = 0.2) +
+  labs(title = "Figure 5.1: Average Depression Level by Divorce Level",
+       x = "How Often Discuss Divorce", 
+       y = "Average Depression Level") + 
+  theme_light() 
+```
+
+The figure below (Figure 5.2) examines the relationship between how often a person attended religious service and their average depression level. It appears that as a couple attended religious service more often, they were generally less depressed. Although there appears to be quite a large amount of variation, and the relationship is quite weak, let us assume this relationship is linear and use the religious predictor as a numeric value in our analysis. 
+
+```{r friends-average-plot, echo = FALSE}
+friAv <- data.frame(friends = c("1", "2", "3", "4"),
+                  mean = with(subset6, tapply(as.numeric(depressed), 
+                                              as.numeric(friends), mean)))
+
+ggplot(data = friAv, aes(x = as.numeric(friends), y = as.numeric(mean))) +
+  geom_point(color = "cadetblue4") +
+  stat_smooth(method = "lm", formula = y ~ x, color = "cadetblue4",
+              alpha = 0.2) +
+  labs(title = "Figure 5.2: Average Depression Level by Friends",
+       x = "Have Enough Friends from Strongly Agree to Disagree", 
+       y = "Average Depression Level") + 
+  theme_light() 
+```
+
+The figure below (Figure 5.3) examines the relationship between a person's political views and their average depression level. It appears that as a person becomes more conservative, they were generally less depressed. This relationship appears to be linear as we can thus consider our politics predictor as a numeric value. 
+
+```{r politics-average-plot, echo = FALSE}
+polAv <- data.frame(politics = c("1", "2", "3", "4", "5"),
+                  mean = with(subset6, tapply(as.numeric(depressed), 
+                                              as.numeric(politics), mean)))
+
+ggplot(data = polAv, aes(x = as.numeric(politics), y = as.numeric(mean))) +
+  geom_point(color = "cadetblue4") +
+  stat_smooth(method = "lm", formula = y ~ x, color = "cadetblue4",
+              alpha = 0.2) +
+  labs(title = "Figure 5.3: Average Depression Level by Politics Level",
+       x = "Political Affiliation from Very Liberal to Very Conservative", 
+       y = "Average Depression Level") + 
+  theme_light() 
+```
+
+The figure below (Figure 5.4) examines the relationship between a person's income and their average depression level. It appears that as a person's income increases, they were generally less depressed. This relationship appears to be linear as we can thus consider our income predictor as a numeric value. 
+
+```{r income-average-plot, echo = FALSE}
+incAv <- data.frame(income = seq(from = 1, to = 21, by = 1),
+                  mean = with(subset6, tapply(as.numeric(depressed), 
+                                              as.numeric(income), mean)))
+
+ggplot(data = incAv, aes(x = as.numeric(income), y = as.numeric(mean))) +
+  geom_point(color = "cadetblue4") +
+  stat_smooth(method = "lm", formula = y ~ x, color = "cadetblue4",
+              alpha = 0.2) +
+  labs(title = "Figure 5.4: Average Depression Level by Income",
+       x = "Income from Low to High", 
+       y = "Average Depression Level") + 
+  theme_light() 
+```
+
+The figure below (Figure 5.5) examines the relationship between a person's health and their average depression level. It appears that as a person rates themselves as less health, they were generally more depressed. This relationship appears to be linear as we can thus consider our health predictor as a numeric value. 
+
+```{r health-average-plot, echo = FALSE}
+healthAv <- data.frame(health = c("1", "2", "3", "4"),
+                  mean = with(subset6, tapply(as.numeric(depressed), 
+                                              as.numeric(health), mean)))
+
+ggplot(data = healthAv, aes(x = as.numeric(health), y = as.numeric(mean))) +
+  geom_point(color = "cadetblue4") +
+  stat_smooth(method = "lm", formula = y ~ x, color = "cadetblue4",
+              alpha = 0.2) +
+  labs(title = "Figure 5.5: Average Depression Level by Health Level",
+       x = "Health from Excellent to Poor", 
+       y = "Average Depression Level") + 
+  theme_light() 
+```
+
+### Section 5.3: Exploring the Model: Depression Level by Divorce, Politics, Religion, Income, and Health
+
+Now that we have visualized the relationship between our predictors and depression, let us fit an appropriate model to explore that relationship further. Because we have more than one level in our response variable, depression level, a multinomial model may be appropriate for this data, where $$Y_i \sim Categorial(\pi_{i(rarely)}, \pi_{i(little)}, \pi_{i(moderate)}, \pi_{i(most)})$$ Our reference category for $Y_i$ is "(1) Rarely or None at All". The model being fit for our parameters of interest is:
+
+$$ log \left(\frac{\pi_{i(little)}}{\pi_{i(rarely)}} \right) = \beta_{0(little)} + \beta_{1(little)}Divorce_i + \beta_{2(little)}Friends_i + \beta_{3(little)}Politics_i $$
+$$ + \beta_{4(little)}Income_i + \beta_{5(little)}Health_i$$
+
+$$ log \left(\frac{\pi_{i(moderate)}}{\pi_{i(rarely)}} \right) = \beta_{0(moderate)} + \beta_{1(moderate)}Divorce_i + \beta_{2(moderate)}Friends_i + \beta_{3(moderate)}Politics_i $$
+$$ + \beta_{4(moderate)}Income_i + \beta_{5(moderate)}Health_i$$
+
+$$ log \left(\frac{\pi_{i(most)}}{\pi_{i(rarely)}} \right) = \beta_{0(most)} + \beta_{1(most)}Divorce_i + \beta_{2(most)}Friends_i + \beta_{3(most)}Politics_i $$
+$$ + \beta_{4(most)}Income_i + \beta_{5(most)}Health_i$$
+Refer to section 2.3.2 for a further explanation of the multinomial model.
+
+```{r ww-2-model, warning = FALSE, message = FALSE, echo = FALSE, include = FALSE}
+ww_2_model = multinom(depressed ~ as.numeric(divorce) + as.numeric(friends) 
+                  + as.numeric(politics) + as.numeric(income) + 
+                    as.numeric(health), data = subset6)
+df5 <- round(coef(ww_2_model), 4)
+```
+The fitted model is:
+
+$$ log \left(\frac{\hat{\pi}_{i(little)}}{\hat{\pi}_{i(rarely)}} \right) = -0.409 + 0.369Divorce - 0.408Friends - 0.129Politics $$
+$$ + 0.012Income + 0.399Health$$
+
+$$ log \left(\frac{\hat{\pi}_{i(moderate)}}{\hat{\pi}_{i(rarely)}} \right) = -2.146 + 0.549Divorce - 0.700Friends - 0.179Politics $$
+$$ - 0.006Income + 0.845Health$$
+
+$$ log \left(\frac{\hat{\pi}_{i(most)}}{\hat{\pi}_{i(rarely)}} \right) = -2.870 + 0.733Divorce - 0.431Friends - 0.279Politics $$
+$$ - 0.134Income + 0.866Health$$
+
+The table below (Table 5.1) displays the coefficients for the fitted model. 
+
+```{r coefs-ww-2-model, echo = FALSE}
+knitr::kable(df5, col.names = c("Intercept", "Divorce", "Friends", "Politics", 
+                                "Income", "Health"),
+             caption = "Table 5.1: Coefficients for Model 2")
+```
+
+## Section 5.4: Conclusion
+
+In our exploration of depression above, we first came to the similar conclusion as seen in section 2 that individuals are most likely to rate themselves as depressed rarely or none of the time, followed by a little of the time, a moderate amount of the time, and least likely to rate themselves as depressed most or all of the time.
+
+Looking at our predictors, we see that individuals are more likely to rate themselves as depressed more often as they discuss divorce with their partner more often, while they are less likely to rate themselves as depressed more often when they discuss divorce with their partner less often. We also see that as individuals disagree more with the statement "I do not have enough friends," they are less to rate themselves as depressed more often than rarely or none of the time. There also appears to be a correlation between how often individuals felt depressed and their political views--with those rating themselves as more conservative being less likely to rate themselves as depressed more often than rarely or none of the time. For our income predictor, there also appears to be a generally consistent relationship where as individuals make more money, they are less likely to rate themselves as depressed more often than rarely of none of the time. The only exception to this is that individuals who make more money are slightly more likely to rate themselves as depressed a little of the time versus rarely or none of the time. Finally, we also see that as individuals rate themselves as less healthy, they are more likely to rate themselves as depressed more often than rarely or none at all. 
+
+In conclusion, it appears that individuals who discuss divorce the most often, feel as though they do not have enough friends, are the most liberal, make the least amount of money, and are the least healthy are the most depressed. Further, those who discuss divorce the least often, feel as though they have enough friends, are the most conservative, make the most money, and are the most healthy are the least depressed. 
+
+# Chapter 2: Public School Data for Exploring Online Product Trends and the Effect of COVID-19
+
+# Section 1: Introduction
+
+The data being examined comes from a variety of public and automatically collected data sources. The engagement data is sourced from LearnPlatform’s Student Chrome Extension, which collects page load events of over 10,000 education technology products in LearnPlatform’s product library, including websites, apps, web apps, software programs, extensions, ebooks, hardwares, and services used in education institutions. District data comes from a collection of information from the National Center for Education Statistics, The Federal Communications Commission, and Edunomics Lab. [1]
+
+The engagement data is aggregated as school district level, with each file containing information on the time when the product was accessed, the unique identified of the product, the percentage of students in the district who had at least one page-load event of a given product and on a given day, and the total page-load events per one thousand students of a given product and on a given day. The district information data underwent an anonymization process to remove identifiable information about the schools districts and contains information regarding district id, state, locale, percent of students identified as Black or Hispanic, percent of students on free or reduced lunch, information regarding internet connection speed, and the per-pupil total expenditure. Finally, our product information data includes information about the top 372 products with most users in 2020 and contains information regarding the unique identifier of the product, the URL to the product, the product name, the product provider, the sector of education in which the product is used, and the product’s primary essential function. In summary of the data being examined, there is a total of 236 files and 945 columns. [1]
+
+With this data, we hope to explore overall trends in the popularity of online educational tools, as well as how this has changed over time throughout the COVID-19 pandemic. Further, we hope to draw out patterns that may exist between the use of paid products and the percentage of students on free or reduced lunch in the district, thus attempting to identify a correlation between the quality of educational products being used and the general wealth of the district. 
+
+# Section 2: Exploring the Data
+
+Before beginning any in-depth analysis of the data, a general data exploration was necessary to draw out any trends and to determine the format of the data that was to be worked with. As this data involves various files corresponding to many different districts, it was first vital to understanding the structure data within the individual districts before diving into any intensive data transformation across various districts. 
+
+To begin, district **4165** was chosen at random. Either in an attempt to anonymize data and/or simply due to a lack of available information, there is no data available regarding the state or locale in which this district stands. Although unfortunate, selecting a district at random which happens to have missing information gave crucial insights into how to handle the data moving forward. By focusing on particular state, locales, and/or general wealth of districts, we can be deliberate in our choice of district in order to stray clear of missing data. 
+
+```{r, warning = FALSE, message = FALSE, echo = FALSE}
+engagement4165 <- read.csv(file = paste("/Users/longtn18/Desktop/Fall 2021/",
+"Research Capstone II/COVID Learning Data/learnplatform-covid19-impact-on-",
+"digital-learning/engagement_data/4165.csv", sep = ""))
+
+districts <- read.csv(file = paste("/Users/longtn18/Desktop/Fall 2021/",
+"Research Capstone II/COVID Learning Data/learnplatform-covid19-impact-on-",
+"digital-learning/districts_info.csv", sep = ""))
+  
+products <- read.csv(file = paste("/Users/longtn18/Desktop/Fall 2021/",
+"Research Capstone II/COVID Learning Data/learnplatform-covid19-impact-on-",
+"digital-learning/products_info.csv", sep = ""))
+```
+
+## Section 2.1: Popular Products in District 4165
+
+To begin our data exploration of district 4165, we are going to look at which products are engaged with the most often. To do this, we will average the engagement across each product and then join this data with the product data in order to connect the product IDs with the product names. Unlike the data in Chapter 1, there is much more data manipulation and transformation necessary in order to draw out useful information.
+
+In our first attempt at formatting the data in a useful way, we grouped the data by product ID, averaging the engagement score in order to gain insight into which products where engaged with most often, on average. 
+
+```{r, warning = FALSE, message = FALSE, echo = FALSE}
+mean_engage_data <- engagement4165 %>%
+   group_by(lp_id) %>%
+   summarize(
+       mean_access = round(mean(pct_access), digits = 2),
+       mean_engagement = round(mean(engagement_index), digits = 2)
+  )
+
+product_engagement <- na.omit(full_join(mean_engage_data, products, by = 
+                                          c("lp_id" = "LP.ID")))
+```
+
+```{r, warning = FALSE, message = FALSE, echo = FALSE}
+top_n(product_engagement, n = 5, mean_engagement) %>%
+  ggplot(., aes(x = Product.Name, y = mean_engagement)) +
+  geom_bar(stat = 'identity', fill = "indianred") +
+  labs(title = "Figure 2.1: Top 5 Products in District 4165", x = "Product",
+       y = "Average Engagement") +
+  theme_light()
+```
+
+The figure above (Figure 2.1) displays the top 5 most engaged with products over the course of the data collection for district 4165. The top 5 most popular products, from most to least, are Canvas, Google Docs, YouTube, ClassLink, and Kahoot. 
+
+Given that no information is available regarding state, locale, or general demographics, no useful conclusions can be draw regarding the correlation between popular products and district type. However, on a general level, it is useful to be able to manipulate the data in a way which makes separating the most popular products possible. Further, although no conclusions can be drawn which relates products to district, we can begin to explore another question of interest, which is the affect of COVID-19 on product use. We will explore this question further in the following section. 
+
+### Section 2.1.1: Canvas Popularity Over Time
+
+Since we know that Canvas was the most popular online learning product in this district, let's look at the popularity of Canvas over the course of 2020. To do this, we need to complete some further data cleaning and transformation--first tidying up our data by disposing of all product information except for the product of interest--Canvas, and then to average the engagement level by month to see changes across time. 
+
+```{r, warning = FALSE, message = FALSE, echo = FALSE}
+product_engagement2 <- na.omit(full_join(engagement4165, products, by = 
+                                          c("lp_id" = "LP.ID")))
+
+Canvas <- dplyr::filter(product_engagement2, grepl('Canvas', Product.Name))
+Canvas <- dplyr::filter(Canvas, grepl('2020', time))
+```
+
+```{r, warning = FALSE, message = FALSE, echo = FALSE}
+colnames(Canvas)[which(names(Canvas) == "time")] <- "month"
+
+for(i in 1:nrow(Canvas)) {
+  if(grepl("-01-", Canvas$month[i], fixed = "TRUE")) {
+  Canvas$month[i] <- "January"
+  }
+  if(grepl("-02-", Canvas$month[i], fixed = "TRUE")) {
+  Canvas$month[i] <- "February"
+  }
+  if(grepl("-03-", Canvas$month[i], fixed = "TRUE")) {
+  Canvas$month[i] <- "March"
+  }
+  if(grepl("-04-", Canvas$month[i], fixed = "TRUE")) {
+  Canvas$month[i] <- "April"
+  }
+  if(grepl("-05-", Canvas$month[i], fixed = "TRUE")) {
+  Canvas$month[i] <- "May"
+  }
+  if(grepl("-06-", Canvas$month[i], fixed = "TRUE")) {
+  Canvas$month[i] <- "June"
+  }
+  if(grepl("-07-", Canvas$month[i], fixed = "TRUE")) {
+  Canvas$month[i] <- "July"
+  }
+  if(grepl("-08-", Canvas$month[i], fixed = "TRUE")) {
+  Canvas$month[i] <- "August"
+  }
+  if(grepl("-09-", Canvas$month[i], fixed = "TRUE")) {
+  Canvas$month[i] <- "September"
+  }
+  if(grepl("-10-", Canvas$month[i], fixed = "TRUE")) {
+  Canvas$month[i] <- "October"
+  }
+  if(grepl("-11-", Canvas$month[i], fixed = "TRUE")) {
+  Canvas$month[i] <- "November"
+  }
+  if(grepl("-12-", Canvas$month[i], fixed = "TRUE")) {
+  Canvas$month[i] <- "December"
+  }
+}
+
+mean_canvas_data <- Canvas %>%
+   group_by(month) %>%
+   summarize(
+       mean_access = round(mean(pct_access), digits = 2),
+       mean_engagement = round(mean(engagement_index), digits = 2)
+  )
+
+x <- c("January", "February", "March", "April", "May", "June", "July", 
+       "August", "September", "October", "November", "December")
+
+mean_canvas_data <- mean_canvas_data %>%
+  slice(match(x, month))
+
+mean_canvas_data$month <- factor(mean_canvas_data$month, 
+                                 levels = mean_canvas_data$month)
+```
+
+```{r, warning = FALSE, message = FALSE, echo = FALSE}
+ggplot(data = mean_canvas_data, aes(x = month, y = mean_engagement, group = 1)) +
+  geom_line(color = "indianred") +
+  geom_point(color = "indianred4") +
+  theme_light() +
+  theme(axis.text.x = element_text(angle = 90)) +
+  labs(title = "Figure 2.2: Canvas Use Over Time in 2020 in District 4165", x = "Month",
+       y = "Average Engagement")
+```
+
+The figure above (Figure 2.2) shows the average engagement level of Canvas by month in 2020 in district 4165. As is evident by the plot, engagement level increases from January to March, before drastically decreasing from March to June and July. There is then another large increase in engagement from July to September, and a decrease from September to December. The drastic decrease in use seen in June and July is to be expected due to most students being on summer break and thus not accessing their classes. It could also be expected that there is greater engagement in general during the Fall semester from August to November than in the Spring semester from January to May due to the large influx of online students during the COVID-19 pandemic. Thus, although difficult to relate district information to product use due to a lack of district information, it is clear from the above data exploration that COVID-19 did indeed have an impact on the use of online educational tools. 
+
+## Section 2.2: Comparing Product Use Across Districts
+
+Now that we have begun a general exploration of the data and have a good sense of the structure and nature of the data being examined, let us dive into a more specific exploration of product use across districts. Rather than a random district selection, as seen in section 2.1, we have intentionally chosen districts which contain state, locale, and demographic information. Further, we are going to narrow our exploration to North Carolina districts in order to compare districts based solely on locale, rather than allowing state to impact outcome. 
+
+The three districts chosen for this discussion are district 7177, which is considered to be suburb, district 6584, which is considered to be rural, and district 7767, which is considered to be city. By choosing districts with differing locale classifications, we hope to draw out some correlations between locale, which often relates to general wealth, and product use. 
+
+Before beginning our exploration, similar to the previous section on district 4165, we will average the engagement data across each product and join that with the information available for each product. In doing this, we will be able to compare both the top products across each district, as well as compare the overall use of each of the top products. 
+
+```{r, warning = FALSE, message = FALSE, echo = FALSE}
+NCdistricts <- districts[districts[, "state"] == "North Carolina",]
+
+engagement7177 <- na.omit(read.csv(file = paste("/Users/longtn18/Desktop/Fall 2021/",
+"Research Capstone II/COVID Learning Data/learnplatform-covid19-impact-on-",
+"digital-learning/engagement_data/7177.csv", sep = "")))
+engagement6584 <- na.omit(read.csv(file = paste("/Users/longtn18/Desktop/Fall 2021/",
+"Research Capstone II/COVID Learning Data/learnplatform-covid19-impact-on-",
+"digital-learning/engagement_data/6584.csv", sep = "")))
+engagement7767 <- na.omit(read.csv(file = paste("/Users/longtn18/Desktop/Fall 2021/",
+"Research Capstone II/COVID Learning Data/learnplatform-covid19-impact-on-",
+"digital-learning/engagement_data/7767.csv", sep = "")))
+```
+
+```{r, warning = FALSE, message = FALSE, echo = FALSE}
+mean_engagement_data <- function(X){
+result <- X %>%
+   group_by(lp_id) %>%
+   summarize(
+       mean_access = round(mean(pct_access), digits = 2),
+       mean_engagement = round(mean(engagement_index), digits = 2)
+  )
+
+return(result)
+}
+```
+
+### Section 2.2.1: Product Use in NC - Suburb vs. Rural vs. City
+
+```{r, warning = FALSE, message = FALSE, echo = FALSE}
+mean7177 <- mean_engagement_data(engagement7177)
+mean6584 <- mean_engagement_data(engagement6584)
+mean7767 <- mean_engagement_data(engagement7767)
+
+products7177 <- na.omit(full_join(mean7177, products, by = c("lp_id" = "LP.ID"))) 
+products6584 <- na.omit(full_join(mean6584, products, by = c("lp_id" = "LP.ID"))) 
+products7767 <- na.omit(full_join(mean7767, products, by = c("lp_id" = "LP.ID"))) 
+```
+
+To start with district 7177, which is a suburb district, we can examine the figure below (Figure 2.3) to see that the most engaged-with product was Canvas, with Google Docs a close second. 
+
+```{r, warning = FALSE, message = FALSE, echo = FALSE}
+top_n(products7177, n = 5, mean_engagement) %>%
+  ggplot(., aes(x = Product.Name, y = mean_engagement)) +
+  geom_bar(stat = 'identity', fill = "indianred") +
+  labs(title = "Figure 2.3: Top 5 Products in NC District 7177 - Suburb", x = "Product",
+       y = "Average Engagement") +
+  theme_light()
+```
+
+Now to look at district 6584, which is a rural district, we can examine the figure below (Figure 2.4) to see that the most engaged-with product was Google Docs, with Canvas making the top-five list, but not being the most-engaged with product. 
+
+```{r, warning = FALSE, message = FALSE, echo = FALSE}
+top_n(products6584, n = 5, mean_engagement) %>%
+  ggplot(., aes(x = Product.Name, y = mean_engagement)) +
+  geom_bar(stat = 'identity', fill = "indianred") +
+  labs(title = "Figure 2.4: Top 5 Products in NC District 6584 - Rural", x = "Product",
+       y = "Average Engagement") +
+  theme_light()
+```
+
+Finally, looking at district 7767, which is a city district, we can examine the figure below (Figure 2.5) to see that the most engaged-with product was Canvas, with YouTube following closely in second. 
+
+```{r, warning = FALSE, message = FALSE, echo = FALSE}
+top_n(products7767, n = 5, mean_engagement) %>%
+  ggplot(., aes(x = Product.Name, y = mean_engagement)) +
+  geom_bar(stat = 'identity', fill = "indianred") +
+  labs(title = "Figure 2.5: Top 5 Products in NC District 7767 - City", x = "Product",
+       y = "Average Engagement") +
+  theme_light()
+```
+
+Examining the figures above, we can draw out some interesting and perhaps unexpected correlations between product use and locale. While it is clear from our exploration thus far that Canvas is a popular product across the board, regardless of district, we must also note that Canvas is a paid product. Thus, taking a look at average Canvas engagement across each district, it must be noted that although Canvas is the most popular product both within the city and suburb district, the average engagement for Canvas is the lowest in the city district. While the average engagement for Canvas in the suburb district is around 6,000, and the average engagement for Canvas in the rural district is around 2,900, the average engagement for Canvas in the city district is around 2,000. Therefore, it can either be concluded that the city district uses online products less in general--perhaps opting for more in-person instruction, or it can be concluded that the city district has less means to pay for paid services such as Canvas, and thus opts for more offline education. 
+
+Although these conclusions are interesting, one thing that is certain from this exploration is that not only is Canvas the most popular product in the suburb district, but it is also used most heavily, surpassing the average engagement of the rural district by around 3,000 and of the city district by around 4,000. Thus, it is possible either that the suburb opts for more online education, or that they have a greater means to pay for paid services. 
+
+### Section 2.2.2: Comparing Canvas Use Over Time for NC Districts
+
+Since we know that Canvas is both a paid service and a popular product across all three districts, let us compare the use of Canvas over time in each district. In order to due this, we first had to conduct some data transformations by dropping all product information except for Canvas, and averaging engagement by month. 
+
+```{r, warning = FALSE, message = FALSE, echo = FALSE}
+fullData7177 <- na.omit(full_join(engagement7177, products, by = 
+                                          c("lp_id" = "LP.ID")))
+
+Canvas7177 <- dplyr::filter(fullData7177, grepl('Canvas', Product.Name))
+Canvas7177 <- dplyr::filter(Canvas7177, grepl('2020', time))
+
+fullData6584 <- na.omit(full_join(engagement6584, products, by = 
+                                          c("lp_id" = "LP.ID")))
+
+Canvas6584 <- dplyr::filter(fullData6584, grepl('Canvas', Product.Name))
+Canvas6584 <- dplyr::filter(Canvas6584, grepl('2020', time))
+
+fullData7767 <- na.omit(full_join(engagement7767, products, by = 
+                                          c("lp_id" = "LP.ID")))
+
+Canvas7767 <- dplyr::filter(fullData7767, grepl('Canvas', Product.Name))
+Canvas7767 <- dplyr::filter(Canvas7767, grepl('2020', time))
+```
+
+```{r, warning = FALSE, message = FALSE, echo = FALSE}
+monthNames <- function(X) {
+  
+  colnames(X)[which(names(X) == "time")] <- "month"
+
+for(i in 1:nrow(X)) {
+  if(grepl("-01-", X$month[i], fixed = "TRUE")) {
+  X$month[i] <- "January"
+  }
+  if(grepl("-02-", X$month[i], fixed = "TRUE")) {
+  X$month[i] <- "February"
+  }
+  if(grepl("-03-", X$month[i], fixed = "TRUE")) {
+  X$month[i] <- "March"
+  }
+  if(grepl("-04-", X$month[i], fixed = "TRUE")) {
+  X$month[i] <- "April"
+  }
+  if(grepl("-05-", X$month[i], fixed = "TRUE")) {
+  X$month[i] <- "May"
+  }
+  if(grepl("-06-", X$month[i], fixed = "TRUE")) {
+  X$month[i] <- "June"
+  }
+  if(grepl("-07-", X$month[i], fixed = "TRUE")) {
+  X$month[i] <- "July"
+  }
+  if(grepl("-08-", X$month[i], fixed = "TRUE")) {
+  X$month[i] <- "August"
+  }
+  if(grepl("-09-", X$month[i], fixed = "TRUE")) {
+  X$month[i] <- "September"
+  }
+  if(grepl("-10-", X$month[i], fixed = "TRUE")) {
+  X$month[i] <- "October"
+  }
+  if(grepl("-11-", X$month[i], fixed = "TRUE")) {
+  X$month[i] <- "November"
+  }
+  if(grepl("-12-", X$month[i], fixed = "TRUE")) {
+  X$month[i] <- "December"
+  }
+}
+
+mean_canvas_data <- X %>%
+   group_by(month) %>%
+   summarize(
+       mean_access = round(mean(pct_access), digits = 2),
+       mean_engagement = round(mean(engagement_index), digits = 2)
+  )
+
+x <- c("January", "February", "March", "April", "May", "June", "July", 
+       "August", "September", "October", "November", "December")
+
+mean_canvas_data <- mean_canvas_data %>%
+  slice(match(x, month))
+
+mean_canvas_data$month <- factor(mean_canvas_data$month, 
+                                 levels = mean_canvas_data$month)
+
+return(mean_canvas_data)
+}
+```
+
+```{r, warning = FALSE, message = FALSE, echo = FALSE}
+canvas_data_7177 <- monthNames(Canvas7177)
+canvas_data_6584 <- monthNames(Canvas6584)
+canvas_data_7767 <- monthNames(Canvas7767)
+```
+
+The figure below (Figure 2.6) shows some interesting trends. As may be expected, Canvas is used often from January - March and then again from August - December in district 7177, suggesting that Canvas was likely already being used relatively often prior to the appearance of COVID-19. However, dissimilar from this is district 7767. It seems as though Canvas was rarely used in the Spring semester, then used heavily in the Fall semester when many classes likely had to be moved online. This may suggest that district 7177 (a suburb district) could afford to use Canvas and did so regardless of online necessity; however, district 7767 (a city district) used Canvas only when necessary, which may reflect a lack of ability to pay for the service. Perhaps the most interesting trend is seen in district 6584 (a rural district), where Canvas was used more often in the Spring semester and less often in the Fall semester. Given that this is a rural district, this may be due to a lack of internet connectivity among students who were now being required to take classes from home, rather than at school, where internet was provided. However, this may also reflect the negative monetary impact that COVID-19 had on many businesses, in which the rural district may have been able to afford more paid services prior to COVID-19, and less during, when they were more needed. 
+
+Also, it may seem that Canvas use in the city should surpass Canvas use in the rural district, as a paid service might be expected to be used more heavily in areas typically associated with greater wealth; however, taking a glance at the free/reduced lunch statistics shows that this was not the case. While the suburb district, which had the highest Canvas use overall, had a free/reduced lunch ratio of 0.2 - 0.4, both the city and rural districts had a free/reduced lunch ratio of 0.6 - 0.8, suggesting that, contrary to what may be assumed, the city district may not be wealthier than the rural district. 
+
+```{r, warning = FALSE, message = FALSE, echo = FALSE}
+ggplot() +
+  geom_line(data = canvas_data_7767, 
+            aes(x = month, y = mean_engagement, group = 1, 
+                color = "District 7767 (City)")) +
+  geom_line(data = canvas_data_6584, 
+            aes(x = month, y = mean_engagement, group = 1, 
+                color = "District 6584 (Rural)")) +
+  geom_line(data = canvas_data_7177, 
+            aes(x = month, y = mean_engagement, group = 1, 
+                color = "District 7177 (Suburb)")) +
+  theme_light() +
+  theme(axis.text.x = element_text(angle = 90)) +
+  labs(title = "Figure 2.6: Canvas Use Over Time in 2020 in NC Districts - Comparison", 
+       x = "Month",
+       y = "Average Engagement") +
+  scale_color_manual(name = "Districts",
+                     values = c("District 7767 (City)" = "indianred", 
+                                "District 6584 (Rural)" = "olivedrab4",
+                                "District 7177 (Suburb)" = "darkslategray3"))
+```
+
+## Section 2.3: Product Use in Indiana vs. California
+
+Now that we have narrowed our focus on comparing districts only within North Carolina, let us now widen our focus on comparing districts between two differing states. In an attempt to draw out clear differences, we have chosen two states which differ widely in their demographics and social programs--Indiana and California. Instead of focusing on particular districts, all districts from each state were combined into one large dataset. Each dataset includes the district ID, a month range from January - March, April - May, June - July, and August - December, a unique identifier for product, mean engagement, mean access, product name, the locale of the district, the percent of students on free or reduced lunch in the district, and the per pupil expenditure in the district. Data transformations involving reading in many files, splitting up statistics into time frames, and averaging across month and product were required to get the data into the necessary format. These data transformation were performed on seven districts in Indiana and twelve districts in California. 
+
+With this newly-tranformed data, we will explore the top products by state and by month, as well as comparing top products by general wealth, which will be determined based on the percentage of students on free or reduced lunch. 
+
+```{r, warning = FALSE, message = FALSE, echo = FALSE}
+Indiana <- na.omit(read.csv(file = paste("/Users/longtn18/Desktop/Fall 2021/Research",
+                                 " Capstone II/COVID Learning Data/",
+                                 "learnplatform-covid19-impact-on-digital-",
+                                 "learning/Condensed_Indiana_Product_Engagement",
+                                 "_by_District.csv", sep = "")))
+
+Indiana$pct_free.reduced[Indiana$pct_free.reduced == ""] <- "Not Reported"  
+Indiana$pct_free.reduced[Indiana$pct_free.reduced == "NaN"] <- "Not Reported"  
+
+California <- na.omit(read.csv(file = paste("/Users/longtn18/Desktop/Fall 2021/Research",
+                                 " Capstone II/COVID Learning Data/",
+                                 "learnplatform-covid19-impact-on-digital-",
+                                 "learning/Condensed_California_Product_Engagement",
+                                 "_by_District.csv", sep = "")))
+
+California$pct_free.reduced[California$pct_free.reduced == ""] <- "Not Reported"  
+California$pct_free.reduced[California$pct_free.reduced == "NaN"] <- "Not Reported"  
+```
+
+### Section 2.3.1: Top Products by Month in Indiana
+
+The month time frames were split up by January - March, to signify pre-COVID-19, April - March, to signify the half of the Spring semester in which COVID-19 began, June - July, to signify the summer, and August - December, to signify the Fall Semester. 
+
+Beginning with Indiana, let us examine the figures below (Figure 2.7 - 2.10). As time goes on, it is clear that Google Doc use increases, having an average engagement below 40,000 in the Fall Semester prior to COVID-19, and an average engagement well above 40,000 in the Fall Semester after COVID-19 began. Further, in the Spring Semester, average engagement with Google Docs exceeds 60,000--displaying an undeniable shift to online product use after COVID-19 began. This trend is also present in Canvas and YouTube use. Also interesting is the spike in YouTube use during the summer; however, this is likely due to students watching videos for enjoyment during their time off. 
+
+```{r, warning = FALSE, message = FALSE, echo = FALSE}
+Indiana_JanMar <- subset(Indiana, Month == "Jan-Mar")
+Indiana_AprMay <- subset(Indiana, Month == "Apr-May")
+Indiana_JunJul <- subset(Indiana, Month == "Jun-Jul")
+Indiana_AugDec <- subset(Indiana, Month == "Aug-Dec")
+
+top1 <- top_n(Indiana_JanMar, n = 12, mean_engagement)
+
+plot1 <- ggplot(top1, aes(x = Product.Name, y = mean_engagement)) +
+  geom_bar(stat = 'identity', fill = "indianred") +
+  labs(title = "Figure 2.7: Jan-Mar", x = "Product",
+       y = "Average Engagement") +
+  theme_light() +
+  theme(axis.text.x = element_text(angle = 90))
+
+top2 <- top_n(Indiana_AprMay, n = 12, mean_engagement)
+
+plot2 <- ggplot(top2, aes(x = Product.Name, y = mean_engagement)) +
+  geom_bar(stat = 'identity', fill = "indianred") +
+  labs(title = "Figure 2.8: Apr-May", x = "Product",
+       y = "Average Engagement") +
+  theme_light() +
+  theme(axis.text.x = element_text(angle = 90))
+
+top3 <- top_n(Indiana_JunJul, n = 9, mean_engagement)
+
+plot3 <- ggplot(top3, aes(x = Product.Name, y = mean_engagement)) +
+  geom_bar(stat = 'identity', fill = "indianred") +
+  labs(title = "Figure 2.9: Jun-Jul", x = "Product",
+       y = "Average Engagement") +
+  theme_light() +
+  theme(axis.text.x = element_text(angle = 90))
+
+top4 <- top_n(Indiana_AugDec, n = 11, mean_engagement)
+
+plot4 <- ggplot(top4, aes(x = Product.Name, y = mean_engagement)) +
+  geom_bar(stat = 'identity', fill = "indianred") +
+  labs(title = "Figure 2.10: Aug-Dec", x = "Product",
+       y = "Average Engagement") +
+  theme_light() +
+  theme(axis.text.x = element_text(angle = 90))
+
+grid.arrange(plot1, plot2, ncol = 2)
+grid.arrange(plot3, plot4, ncol = 2)
+```
+
+### Section 2.3.2: Top Products by Month in California
+
+In California, we can examine the figures below (Figure 2.11 - 2.14) to similarly see an increase in Google Doc use; however, the jump in average engagement from January - March to April - May is much more significant, going from around 25,000 to around 80,000. Therefore, the shift to online product use during COVID-19 was not only much more drastic in California, but it also occurred much quicker, with teachers opting for online learning even before the Fall Semester had begun. Interestingly, we see this average engagement actually decrease during the Fall Semester, going back down to around 60,000, perhaps suggesting that their quick respond to COVID-19 may have resulted in an ability to allow some in-person teaching even throughout the Fall Semester. We also similarly see increases in the use of Meet and YouTube, and a spike in YouTube use over the summer. 
+
+```{r, warning = FALSE, message = FALSE, echo = FALSE}
+California_JanMar <- subset(California, Month == "Jan-Mar")
+California_AprMay <- subset(California, Month == "Apr-May")
+California_JunJul <- subset(California, Month == "Jun-Jul")
+California_AugDec <- subset(California, Month == "Aug-Dec")
+
+top1 <- top_n(California_JanMar, n = 10, mean_engagement)
+
+plot1 <- ggplot(top1, aes(x = Product.Name, y = mean_engagement)) +
+  geom_bar(stat = 'identity', fill = "indianred") +
+  labs(title = "Figure 2.11: Jan-Mar", x = "Product",
+       y = "Average Engagement") +
+  theme_light() +
+  theme(axis.text.x = element_text(angle = 90))
+
+top2 <- top_n(California_AprMay, n = 22, mean_engagement)
+
+plot2 <- ggplot(top2, aes(x = Product.Name, y = mean_engagement)) +
+  geom_bar(stat = 'identity', fill = "indianred") +
+  labs(title = "Figure 2.12: Apr-May", x = "Product",
+       y = "Average Engagement") +
+  theme_light() +
+  theme(axis.text.x = element_text(angle = 90))
+
+top3 <- top_n(California_JunJul, n = 18, mean_engagement)
+
+plot3 <- ggplot(top3, aes(x = Product.Name, y = mean_engagement)) +
+  geom_bar(stat = 'identity', fill = "indianred") +
+  labs(title = "Figure 2.13: Jun-Jul", x = "Product",
+       y = "Average Engagement") +
+  theme_light() +
+  theme(axis.text.x = element_text(angle = 90))
+
+top4 <- top_n(California_AugDec, n = 25, mean_engagement)
+
+plot4 <- ggplot(top4, aes(x = Product.Name, y = mean_engagement)) +
+  geom_bar(stat = 'identity', fill = "indianred") +
+  labs(title = "Figure 2.14: Aug-Dec", x = "Product",
+       y = "Average Engagement") +
+  theme_light() +
+  theme(axis.text.x = element_text(angle = 90))
+
+grid.arrange(plot1, plot2, ncol = 2)
+grid.arrange(plot3, plot4, ncol = 2)
+```
+
+### Section 2.3.3: Average Engagement by General Wealth
+
+To focus more on how demographic information may impact product use, let us look at how product use is affected by the percentage of students on free or reduced lunch, which may reflect the general wealth of the district. 
+
+The figure below (Figure 2.15) show the average engagement by general wealth in Indiana. Here, there is a clear correlation between average engagement with online products and the "general wealth" of the district, with wealthy districts having a higher average engagement. Thus, it appears rather evident that districts with less students on free or reduced lunch, and thus perhaps more wealth districts, have greater access to online products, whether paid or unpaid. This could both be due to a lack of resources to pay for paid products such as Canvas, as also a lack of ability of students to afford internet connection to work online from home. 
+
+```{r, warning = FALSE, message = FALSE, echo = FALSE}
+labels <- c("40 - 60", "60 - 80", "80 - 100")
+
+meanData <- Indiana %>%
+   group_by(pct_free.reduced) %>%
+   summarize(
+       mean_access = round(mean(mean_access), digits = 2),
+       mean_engagement = round(mean(mean_engagement), digits = 2)
+  )
+
+ggplot(meanData, aes(x = pct_free.reduced, y = mean_engagement)) +
+  geom_bar(stat = 'identity', fill = "indianred") +
+  labs(title = "Figure 2.15: Indiana Engagement by General Wealth", 
+       x = "% of Students on Free/Reduced Lunch",
+       y = "Average Engagement") +
+  theme_light() +
+  scale_x_discrete(labels = labels)
+```
+
+The figure below (Figure 2.16) show the average engagement by general wealth in Indiana. Here, there does not appear to be as clear of a relationship between the "general wealth" of a district and average engagement. This could be due to the less rural environment of California in general, and thus greater access to internet, and may also be due to a more liberal school system, in which less wealthy individuals and provided greater access to educational tools. 
+
+```{r, warning = FALSE, message = FALSE, echo = FALSE}
+labels <- c("0 - 20", "20 - 40", "40 - 60", "60 - 80")
+
+meanData <- California %>%
+   group_by(pct_free.reduced) %>%
+   summarize(
+       mean_access = round(mean(mean_access), digits = 2),
+       mean_engagement = round(mean(mean_engagement), digits = 2)
+  )
+
+ggplot(meanData, aes(x = pct_free.reduced, y = mean_engagement)) +
+  geom_bar(stat = 'identity', fill = "indianred") +
+  labs(title = "Figure 2.16: California Engagement by General Wealth", 
+       x = "% of Students on Free/Reduced Lunch",
+       y = "Average Engagement") +
+  theme_light() +
+  scale_x_discrete(labels = labels)
+```
+
+## Section 2.4: Conclusion
+
+In our exploration of product use across districts and states, some interesting and perhaps unexpected results were discovered. First, across each of our sections, it is clear that Canvas is a popular product across the board, regardless of state, locale, or pre-COVID-19 or post-COVID-19. However, along with this, it is clear that districts either with greater access to social resources, such as districts in California, or districts with a greater general wealth, not only have greater access to the product itself, but students perhaps also have greater access to internet to access the products. 
+
+Also examining our question of how online product use was impacted by COVID-19, we can refer to use of products across time, such as seen in Figure 2.6, to see that COVID-19 has a rather clear impact not only of overall product use, but on which products were used specifically. For districts which may have been negatively impacted by COVID-19 monetarily, we see a decrease in paid product use, perhaps due to a lack of funding, and perhaps due to a lack of internet access among students. For districts which did not have to worry as much about access to resources, we see the use in these products, specifically paid products, increase with the onslaught of COVID-19. 
+
+Therefore, it is clear from our above exploration that not only do the demographics and locale of a district impact the type and amount of online education product that is being used, but the COVID-19 pandemic also has quite a large impact on the use of online education tools across districts, both in a positive and potentially negative way, depending on the resources available to the district. 
+
+# Section 3: Modeling the Data
+
+Although the structure and nature of the data makes modeling a difficult task, we are now going to shift our focus on attempting to make predicts based on the available information. To do this, we will look both at a basic linear regression and a decision tree. 
+
+## Section 3.1: Basic Linear Regression
+
+To begin with a basic multiple linear regression, we will attempt to tease out the relationship between average engagement for a product and which sector the product is classified in. To do this, we first performed a few data transformations in order to get the average engagement by product and join the product sector information. 
+
+For a basic linear regression model, we are attempting to model the relationship between a scalar response, often denoted $y$, and one or more $p$ explanatory variables, $\beta_{0},...,\beta{p}$. In our case, we are attempting to predict the average engagement of a product based on which sector the product is classified in, PreK through 12, PreK through 12 and Higher Ed and Corporate, Higher Ed and Corporate, or PreK through 12 and Higher Ed. 
+
+For this model, we will focus on engagement data from district 7177, which is a North Carolina suburb district. 
+
+The model will be
+
+$$meanEngagement = \beta_0 + \beta_1 + ... + \epsilon, \epsilon \sim N(0, \sigma)$$
+
+```{r, warning = FALSE, message = FALSE, echo = FALSE}
+engagement7177 <- na.omit(read.csv(file = paste("/Users/longtn18/Desktop/Fall 2021/",
+"Research Capstone II/COVID Learning Data/learnplatform-covid19-impact-on-",
+"digital-learning/engagement_data/7177.csv", sep = "")))
+
+districts <- read.csv(file = paste("/Users/longtn18/Desktop/Fall 2021/",
+"Research Capstone II/COVID Learning Data/learnplatform-covid19-impact-on-",
+"digital-learning/districts_info.csv", sep = ""))
+  
+products <- read.csv(file = paste("/Users/longtn18/Desktop/Fall 2021/",
+"Research Capstone II/COVID Learning Data/learnplatform-covid19-impact-on-",
+"digital-learning/products_info.csv", sep = ""))
+```
+
+```{r, warning = FALSE, message = FALSE, echo = FALSE}
+mean_engagement_data <- function(X){
+result <- X %>%
+   group_by(lp_id) %>%
+   summarize(
+       mean_access = round(mean(pct_access), digits = 2),
+       mean_engagement = round(mean(engagement_index), digits = 2)
+  )
+
+return(result)
+}
+
+mean7177 <- mean_engagement_data(engagement7177)
+
+products7177 <- na.omit(full_join(mean7177, products, by = c("lp_id" = "LP.ID"))) 
+
+products7177 <- products7177[!products7177$Sector.s.== "",]
+```
+
+```{r, warning = FALSE, message = FALSE, echo = FALSE, include = FALSE}
+model = lm(mean_engagement ~ as.factor(Sector.s.), data = products7177)
+```
+
+After fitting the model for predicting average engagement in district 7177 based on which sector the product is categorized in, we are left with the following model:
+
+$$\hat{meanEngagement} = 11.510 + 11.606PreK12 + 147.894PreK12HigherEdCorporate$$
+
+$$- 9.460HigherEdCorporate + 0.1133Prek12HigherEd$$
+
+Based on our model, mean engagement is expected to increase from our intercept of 11.510 the most for products categorized as "PreK-12, HigherEd, and Corporate", where mean engagement is expected to increase by 147.894 when a product has this rating. Mean engagement is expected to decrease the most for products categorized as "Higher Ed and Corporate", where mean engagement is expected to decrease by 9.460 when a product has this rating. 
+
+Thus, in district 7177, the products that are the most engaged with are categorized as "PreK-12, HigherEd, and Corporate", while the products that are least engaged with are categorized as "Higher Ed and Corporate".
+
+The coefficients for the model above are given in the below table (Table 3.1).
+
+```{r coefs-product-model, echo = FALSE}
+df_7177 <- data.frame(Intercept = "11.510", 
+                      PreK12 = "11.606", 
+                      PreK12HigherEdCorporate = "147.894", 
+                      HigherEdCorporate = "-9.406", 
+                      PreK12HigherEd = "0.113")
+
+knitr::kable(df_7177, caption = "Table 3.1: Coefficients for Product Model")
+```
+
+```{r, warning = FALSE, message = FALSE, echo = FALSE}
+result <- products7177 %>%
+   group_by(Sector.s.) %>%
+   summarize(
+       mean_engagement = round(mean(mean_engagement), digits = 2)
+   )
+
+top_n(result, n = 5, mean_engagement) %>%
+  ggplot(., aes(x = Sector.s., y = mean_engagement)) +
+  geom_bar(stat = 'identity', fill = "indianred") +
+  labs(title = "Figure 3.1: Top Engagement by Product Sector", x = "Product Sector",
+       y = "Average Engagement") +
+  theme_light() +
+  theme(axis.text.x = element_text(angle = 90))
+```
+
+To further emphasize the relationship made evident in the model fit, see the figure above (Figure 3.1). While products categorized as "PreK-12, Higher Ed, and Corporate) have an average engagement of greater than 150, all other products have an average engagement of below 25. 
+
+## Section 3.2: Decision Tree
+
+Moving away from basic linear regression and onto a decision tree model, we will now attempt to predict general average engagement of Google products from August to December based on locale and whether or not there are more or less than 60% of students on free/reduced lunch. For this model, we will age use data from Indiana and California to try to distinguish a difference in product use based on state, which is reflected in locale and general wealth. All of the districts from Indiana and California will be considered.  
+
+In order to fit our tree, some data adjustments were first necessary. By separating districts based on whether or not greater than or less than 60% of students were on free or reduced lunch, we hope to more clearly be able to draw out differences. We also combined locale classification as either "City/Suburb" or "Rural/Town" based on similarities between them. Finally, we dropped all data except for data regarding Google products and data within the time frame of August to December. Once these data transformations were complete, we began our modeling. Refer to section 3.3 in Chapter 1 for a greater understanding of decision trees. 
+
+```{r, warning = FALSE, message = FALSE, echo = FALSE}
+CA <- cbind("State" = rep("California", times = nrow(California)), California)
+CA <- subset(CA, Month == "Aug-Dec")
+IN <- cbind("State" = rep("Indiana", times = nrow(Indiana)), Indiana)
+IN <- subset(IN, Month == "Aug-Dec")
+
+CA <- CA[grepl("Google", CA[["Product.Name"]]), ]
+IN <- IN[grepl("Google", IN[["Product.Name"]]), ]
+
+CA$pct_free.reduced[CA$pct_free.reduced == "[0, 0.2["] <- "<60%"
+CA$pct_free.reduced[CA$pct_free.reduced == "[0.2, 0.4["] <- "<60%"
+CA$pct_free.reduced[CA$pct_free.reduced == "[0.4, 0.6["] <- "<60%"
+CA$pct_free.reduced[CA$pct_free.reduced == "[0.6, 0.8["] <- ">60%"
+
+IN$pct_free.reduced[IN$pct_free.reduced == "[0.4, 0.6["] <- "<60%"
+IN$pct_free.reduced[IN$pct_free.reduced == "[0.6, 0.8["] <- ">60%"
+IN$pct_free.reduced[IN$pct_free.reduced == "[0.8, 1["] <- ">60%"
+
+CA$pct_free.reduced <- as.factor(CA$pct_free.reduced)
+IN$pct_free.reduced <- as.factor(IN$pct_free.reduced)
+
+CA$mean_engagement <- as.numeric(CA$mean_engagement)
+
+IN$mean_engagement <- as.numeric(IN$mean_engagement)
+
+CA$State <- as.factor(CA$State)
+IN$State <- as.factor(IN$State)
+
+treeData <- rbind(CA, IN)
+
+treeData$locale[treeData$locale == "City"] <- "City/Suburb"
+treeData$locale[treeData$locale == "Suburb"] <- "City/Suburb"
+treeData$locale[treeData$locale == "Rural"] <- "Rural/Town"
+treeData$locale[treeData$locale == "Town"] <- "Rural/Town"
+
+treeData$locale <- as.factor(treeData$locale)
+```
+
+```{r, warning = FALSE, message = FALSE, echo = FALSE, include = FALSE}
+set.seed(77)
+
+treeData_split <- initial_split(treeData, prop = 0.6)
+treeData_train <- training(treeData_split)
+
+tree <- rpart(mean_engagement ~ locale + pct_free.reduced,
+              data = treeData_train)
+
+printcp(tree)
+```
+
+The decision tree below (Figure 3.2) shows that those in Rural/Town locale have the highest engagement; however, this made up only 14% of the data. Then, among those in the City/Suburb locale, those in districts with <60% of students on free/reduced lunch have the highest engagement. 
+
+```{r, warning = FALSE, message = FALSE, echo = FALSE}
+rpart.plot(tree,
+           roundint = FALSE, tweak = 1.3,
+           main = "Figure 3.2: Mean Engagement by State and Percent of 
+           Students on Free/Reduced Lunch Decision Tree",
+           box.palette = c("#FEE0D2", "#FCBBA1"),
+           branch.lty = 1, fallen.leaves = FALSE, split.yshift = -1, cex = 0.6)
+```
+
+## Section 3.3: Conclusion
+
+Although the nature and structure of the data makes modeling a difficult undertaking, there were some interesting relationships teased out through the use of linear modeling and decision tree modeling. 
+
+Within our exploration of the relationship between average product use and which sector the product falls under, it is clear that products labeled as "PreK-12, Higher Ed, and Corporate" result in the greatest increase in average engagement, while products labeled as "Higher Ed and Corporate" result in a decrease in average engagement. Thus, it can be concluded that online product use is of much greater use when the product is intended to be used in a variety of settings--particularly PreK-12. 
+
+Within our exploration of the relationship between locale, general wealth, and product engagement, it is evident that, although making up less of the overall population, Google products are used most commonly in the rural and town districts. Further, among the city and suburb districts, product engagement is most likely to increase for districts with less then 60% of their students on free or reduced lunch. 
+
+\newpage
+
+# Citations and Appendix
+
+## R Package Citations
+
+Alboukadel Kassambara (2020). ggpubr: 'ggplot2' Based Publication Ready Plots. R package version 0.4.0.
+  https://CRAN.R-project.org/package=ggpubr
+
+Baptiste Auguie (2017). gridExtra: Miscellaneous Functions for "Grid" Graphics. R package version 2.3.
+  https://CRAN.R-project.org/package=gridExtra
+
+Douglas Bates, Martin Maechler, Ben Bolker, Steve Walker (2015). Fitting Linear
+  Mixed-Effects Models Using lme4. Journal of Statistical Software, 67(1), 1-48.
+  doi:10.18637/jss.v067.i01.
+  
+Gareth James, Daniela Witten, Trevor Hastie and Rob Tibshirani (2017). ISLR: Data for an Introduction to
+  Statistical Learning with Applications in R. R package version 1.2. https://CRAN.R-project.org/package=ISLR
+  
+H. Wickham. ggplot2: Elegant Graphics for Data Analysis. Springer-Verlag New York, 2016.
+
+Hadley Wickham, Romain François, Lionel Henry and Kirill Müller (2021). dplyr: A Grammar of Data Manipulation. R package version 1.0.4.
+  https://CRAN.R-project.org/package=dplyr
+
+Jerome Friedman, Trevor Hastie, Robert Tibshirani (2010). Regularization Paths for Generalized Linear Models via
+  Coordinate Descent. Journal of Statistical Software, 33(1), 1-22. URL https://www.jstatsoft.org/v33/i01/.
+  
+Kuhn et al., (2020). Tidymodels: a collection of packages for modeling and machine learning using tidyverse
+  principles. https://www.tidymodels.org
+  
+Max Kuhn (2020). caret: Classification and Regression Training. R package version 6.0-86.
+  https://CRAN.R-project.org/package=caret
+  
+Stephen Milborrow (2020). rpart.plot: Plot 'rpart' Models: An Enhanced Version of 'plot.rpart'. R package version
+  3.0.9. https://CRAN.R-project.org/package=rpart.plot
+  
+Venables, W. N. & Ripley, B. D. (2002) Modern Applied Statistics with S. Fourth Edition. Springer, New York. ISBN
+  0-387-95457-0
+
+Wickham et al., (2019). Welcome to the tidyverse. Journal of Open Source Software, 4(43), 1686,
+  https://doi.org/10.21105/joss.01686
+
+## Other Citations
+
+[1] LearnPlatform. Covid-19 Impact on Digital Learning. Kaggle. August 2021. Retrieved August 15 2021, from https://www.kaggle.com/c/learnplatform-covid19-impact-on-digital-learning/overview. 
+
+[2] Silverstein, Merril, and Bengtson, Vern L. Longitudinal Study of Generations, California, 1971, 1985, 1988, 1991, 1994, 1997, 2000, 2005. Inter-university Consortium for Political and Social Research [distributor], 2019-08-21. https://doi.org/10.3886/ICPSR22100.v5
+
+\newpage
+
+## Code Appendix
+
+```{r ref.label = knitr::all_labels(), echo = TRUE, eval = FALSE}
+```
