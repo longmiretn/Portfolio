@@ -1,0 +1,281 @@
+---
+title: "Predicting Burned Area of Forest Fires Using Meteorological Data"
+author: "Taylor Callahan"
+date: '2023-06-13'
+output: pdf_document
+---
+
+```{r import-packages, warning = FALSE, message = FALSE, echo = FALSE}
+
+library(gridExtra)
+library(ggplot2)
+library(kableExtra)
+library(grid)
+library(dplyr)
+library(caret)
+library(ranger)
+library(rpart)
+library(nnet)
+library(e1071)
+library(kernlab)
+```
+
+```{r import-data, warning = FALSE, message = FALSE, echo = FALSE}
+
+# forest fire data
+df <- read.csv("forestfires.csv")
+```
+
+### Check for missing data
+
+```{r check-for-missing, warning = FALSE, message = FALSE, echo = FALSE}
+
+# Check for missing values in the dataset
+missing_values <- colSums(is.na(df))
+
+# Print the variables with missing values
+print(missing_values[missing_values > 0])
+```
+
+### Data Dictionary
+
+```{r data-dictionary, warning = FALSE, message = FALSE, echo = FALSE, results = 'asis'}
+
+# Data Dictionary
+data_dict <- data.frame(
+  Variable = c("X", "Y", "Month", "Day", "FFMC", "DMC", "DC", "ISI", "Temp", 
+               "RH", "Wind", "Rain", "Area"),
+  Description = c("X-axis spatial coordinate within the Montesinho park map",
+                  "Y-axis spatial coordinate within the Montesinho park map",
+                  "Month of the year (jan to dec)",
+                  "Day of the week (mon to sun)",
+                  "Fine Fuel Moisture Code from the FWI system",
+                  "Duff Moisture Code from the FWI system",
+                  "Drought Code from the FWI system",
+                  "Initial Spread Index from the FWI system",
+                  "Temperature in Celsius degrees",
+                  "Relative humidity in percentage",
+                  "Wind speed in km/h",
+                  "Rainfall in mm/m^2",
+                  "Burned area of the forest (in hectares)"),
+  stringsAsFactors = FALSE
+)
+
+# Format the Data Dictionary table using kableExtra
+data_dict_table <- kable(data_dict, format = "latex", booktabs = TRUE, 
+                         caption = "Data Dictionary") %>%
+  kable_styling(latex_options = c("striped", "hold_position"), 
+                full_width = FALSE) %>%
+  row_spec(1, bold = FALSE) %>%
+  collapse_rows(columns = 2, valign = "top") %>%
+  column_spec(1, border_right = FALSE)
+
+# Print the Data Dictionary table
+print(data_dict_table)
+```
+
+### Data Viz
+
+```{r histogram, warning = FALSE, message = FALSE, echo = FALSE}
+
+# Create a histogram of the "area" variable
+ggplot(df, aes(x = area)) +
+  geom_histogram(fill = "#6A5ACD", binwidth = 15) +
+  labs(title = "Figure 1: Distribution of Burned Area",
+       x = "Area",
+       y = "Frequency") +
+  theme_light() +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+```{r scatter, warning = FALSE, message = FALSE, echo = FALSE}
+
+# Numeric variables
+numeric_vars <- c("FFMC", "DMC", "DC", "ISI", "temp", "RH", "wind", "rain")
+
+# Calculate correlations
+correlations <- sapply(numeric_vars, function(var) {
+  corr <- cor(df[[var]], df$area)
+  paste0(round(corr, 2))
+})
+
+corr <- as.numeric(correlations)
+
+# Create scatterplots
+scatterplots <- lapply(seq_along(numeric_vars), function(i) {
+  var <- numeric_vars[i]
+  
+ ggplot(df, aes_string(x = var, y = "area")) +
+    geom_point(color = "#6A5ACD", fill = "#6A5ACD", size = 1) +
+    annotate("text", x = min(df[[var]]), y = max(df$area),
+             label = paste("r =", round(cor(df[[var]], df$area), 2)),
+             hjust = 0, vjust = 1, 
+             color = ifelse(abs(corr[i]) == max(abs(corr)), "red", "black"), 
+             size = 3) +
+    labs(title = paste(var, "vs. Area"),
+         x = var,
+         y = "Area") +
+    theme_light() 
+})
+
+# Arrange scatterplots in a custom grid layout
+scatter_grid <- grid.arrange(
+  scatterplots[[1]], scatterplots[[2]], scatterplots[[3]],
+  scatterplots[[4]], scatterplots[[5]], scatterplots[[6]],
+  scatterplots[[7]], scatterplots[[8]],
+  nrow = 3, ncol = 3,
+  widths = c(1, 1, 1),
+  heights = c(3, 3, 3)
+)
+
+# Create the title grob
+title <- textGrob("Figure 2: Burned Area vs. Features",
+                  gp = gpar(fontsize = 14))
+
+# Arrange the scatterplot grid and the title using gridExtra
+grid.arrange(title, scatter_grid, nrow = 2, heights = c(0.2, 3.8))
+```
+
+```{r monthly, warning = FALSE, message = FALSE, echo = FALSE}
+
+# Calculate the average burned area by month
+monthly_avg <- aggregate(area ~ month, df, mean)
+
+# Define the order of months
+month_order <- c("jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", 
+                 "sep", "oct", "nov", "dec")
+monthly_avg$month <- factor(monthly_avg$month, levels = month_order)
+
+# Create the line plot
+ggplot(monthly_avg, aes(x = month, y = area, group = 1)) +
+  geom_line(color = "#6A5ACD") +
+  geom_point(color = "#6A5ACD", size = 3) +
+  labs(title = "Figure 3: Average Burned Area by Month",
+       x = "Month",
+       y = "Average Burned Area") +
+  theme_light() +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+## Modeling
+
+```{r modeling, warning = FALSE, message = FALSE, error = FALSE, echo = FALSE, results = "hide"}
+
+# Set seed for reproducibility
+set.seed(123)
+
+df <- read.csv("forestfires.csv")
+
+# Subset the data where area is not equal to 1
+subset_data <- df[df$area != 0, ]
+
+df <- rbind(df, subset_data)
+df <- rbind(df, subset_data)
+
+# Drop NA values from df
+df <- na.omit(df)
+
+# Add 1 to numeric features
+numeric_vars <- c("FFMC", "DMC", "DC", "ISI", "temp", "RH", "wind", "rain")
+df[, numeric_vars] <- df[, numeric_vars] + 1
+
+# Add 1 to the "area" outcome
+df$area <- df$area + 1
+
+# Convert 'X' and 'Y' to numeric
+df <- df %>% 
+  mutate(X = as.numeric(X),
+         Y = as.numeric(Y))
+
+# Convert 'month' and 'day' to factors
+df <- df %>% 
+  mutate(month = as.factor(month),
+         day = as.factor(day))
+
+# Split data into training and testing sets
+train_indices <- createDataPartition(df$area, p = 0.6, list = FALSE)
+train_data <- df[train_indices, ]
+test_data <- df[-train_indices, ]
+
+ctrl <- trainControl(method = "cv", number = 10)
+
+# Define parameter grids for tuning
+param_grid_rf <- expand.grid(mtry = seq(2, 8, by = 2),
+                             min.node.size = c(1, 5, 10),
+                             splitrule = "variance")
+param_grid_svm <- expand.grid(
+  C = c(0.1, 1, 10),
+  sigma = c(0.1, 1, 10)
+)
+param_grid_nn <- expand.grid(size = seq(5, 20, by = 5),
+                             decay = c(0.001, 0.001, 0.0001))
+
+# Train the random forest model using caret and ranger
+model_rf <- train(area ~ ., data = train_data, method = "ranger", 
+                  trControl = ctrl, tuneGrid = param_grid_rf)
+
+# Train the decision tree model using caret and rpart
+model_svm <- train(
+  area ~ .,
+  data = train_data,
+  method = "svmRadial",
+  trControl = trainControl(method = "cv", number = 5),
+  tuneGrid = param_grid_svm
+)
+
+# Train the neural network model using caret and nnet
+model_nn <- train(area ~ ., data = train_data, method = "nnet", 
+                  trControl = ctrl, tuneGrid = param_grid_nn)
+
+# Make predictions on test data
+predictions_rf <- predict(model_rf, newdata = test_data)
+predictions_svm <- predict(model_svm, newdata = test_data)
+predictions_nn <- predict(model_nn, newdata = test_data)
+
+# Calculate RMSE
+rmse_rf <- RMSE(predictions_rf, test_data$area)
+rmse_svm <- RMSE(predictions_svm, test_data$area)
+rmse_nn <- RMSE(predictions_nn, test_data$area)
+
+# Calculate R-squared
+r_squared_rf <- R2(predictions_rf, test_data$area)
+r_squared_svm <- R2(predictions_svm, test_data$area)
+r_squared_nn <- R2(predictions_nn, test_data$area)
+```
+
+```{r table_results, warning = FALSE, message = FALSE, echo = FALSE}
+# Create a data frame with model names and evaluation metrics
+evaluation_table <- data.frame(
+  Model = c("Random Forest", "SVM", "Neural Network"),
+  RMSE = c(rmse_rf, rmse_svm, rmse_nn),
+  R_squared = c(r_squared_rf, r_squared_svm, r_squared_nn)
+)
+
+# Highlight the lowest RMSE and highest R-squared values in red
+evaluation_table$RMSE <- ifelse(evaluation_table$RMSE 
+                                == min(evaluation_table$RMSE), 
+                                sprintf("\\textcolor{red}{%.3f}", 
+                                        evaluation_table$RMSE),
+                                sprintf("%.3f", evaluation_table$RMSE))
+
+evaluation_table$R_squared <- ifelse(evaluation_table$R_squared 
+                                     == max(evaluation_table$R_squared), 
+                                     sprintf("\\textcolor{red}{%.3f}", 
+                                             evaluation_table$R_squared),
+                                  sprintf("%.3f", evaluation_table$R_squared))
+
+# Set the column names
+colnames(evaluation_table) <- c("Model", "RMSE", "R-squared")
+
+# Print the table using kable with LaTeX formatting
+kable(evaluation_table, format = "latex", booktabs = TRUE, escape = FALSE,
+      caption = "Model Evaluation Metrics") %>%
+  kable_styling()
+```
+
+\newpage
+
+## Code Appendix
+
+```{r ref.label = knitr::all_labels(), echo = TRUE, eval = FALSE}
+```

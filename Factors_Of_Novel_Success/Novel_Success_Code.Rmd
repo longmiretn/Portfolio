@@ -1,0 +1,290 @@
+---
+title: "Analyzing the Factors of Novel Success"
+author: "Taylor Callahan"
+date: '2023-07-11'
+output: pdf_document
+---
+
+```{r import-packages, warning = FALSE, message = FALSE, echo = FALSE}
+
+library(ggplot2)
+library(kableExtra)
+library(dplyr)
+library(stringr)
+library(gridExtra)
+library(ranger)
+library(knitr)
+```
+
+```{r import-data, warning = FALSE, message = FALSE, echo = FALSE}
+
+# load data
+df <- read.csv("good_reads_final.csv")
+```
+
+```{r data-dictionary, warning = FALSE, message = FALSE, echo = FALSE, results = 'asis'}
+
+# Create the data dictionary
+data_dict <- data.frame(
+  Variable = c("author_average_rating", "author_gender", "author_genres", 
+               "author_id", "author_name",
+               "author_page_url", "author_rating_count", "author_review_count", 
+               "birthplace",
+               "book_average_rating", "book_fullurl", "book_id", "book_title", 
+               "genre_1", "genre_2",
+               "num_ratings", "num_reviews", "pages", "publish_date", "score"),
+  Description = c("The average rating of the author's books.",
+                  "The gender of the author.",
+                  "The genres associated with the author's works.",
+                  "The unique identifier of the author.",
+                  "The name of the author.",
+                  "The URL of the author's page on Goodreads.",
+                  "The total count of ratings received for the author's books.",
+                  "The total count of reviews received for the author's books.",
+                  "The birthplace of the author.",
+                  "The average rating of the book.",
+                  "The URL of the book's page on Goodreads.",
+                  "The unique identifier of the book.",
+                  "The title of the book.",
+                  "The primary genre of the book.",
+                  "The secondary genre of the book.",
+                  "The total count of ratings received for the book.",
+                  "The total count of reviews received for the book.",
+                  "The number of pages in the book.",
+                  "The publication date of the book.",
+                  "A score associated with the book."),
+    stringsAsFactors = FALSE
+)
+
+# Format the Data Dictionary table using kableExtra
+data_dict_table <- kable(data_dict, format = "latex", booktabs = TRUE, 
+                         caption = "Data Dictionary") %>%
+  kable_styling(latex_options = c("striped", "hold_position"), 
+                full_width = FALSE) %>%
+  row_spec(1, bold = FALSE) %>%
+  collapse_rows(columns = 2, valign = "top") %>%
+  column_spec(1, border_right = FALSE)
+
+# Print the Data Dictionary table
+print(data_dict_table)
+```
+
+### Preparation
+
+```{r add-features, warning = FALSE, message = FALSE, echo = FALSE}
+
+# Remove leading/trailing whitespace and newline characters from the 
+# book_title column
+df$book_title <- str_trim(df$book_title, side = "both")
+
+# Add book_title_length feature to df
+df <- df %>% mutate(book_title_length = nchar(book_title))
+
+# Add first_word_of_title feature to df
+df <- df %>% mutate(first_word_of_title = word(book_title, 1))
+
+# Add words_in_title feature to df
+df <- df %>% mutate(words_in_title = str_count(book_title, "\\w+"))
+```
+
+### Data Viz
+
+```{r histogram, warning = FALSE, message = FALSE, echo = FALSE}
+
+# Create a histogram of book ratings
+ggplot(df, aes(x = book_average_rating)) +
+  geom_histogram(binwidth = 0.1, fill = "skyblue", color = "black") +
+  labs(x = "Book Rating", y = "Frequency", 
+       title = "Figure 1: Histogram of Book Ratings") +
+  theme_light()
+```
+
+```{r bar-chart-first-word, warning = FALSE, message = FALSE, echo = FALSE}
+
+# Count the frequency of first words
+first_word_freq <- table(df$first_word_of_title)
+
+# Sort the frequencies in descending order
+sorted_freq <- sort(first_word_freq, decreasing = TRUE)
+
+# Extract the top five most common first words
+top_words <- names(sorted_freq)[1:5]
+
+# Subset the dataframe for the top five words
+top_df <- subset(df, first_word_of_title %in% top_words)
+
+# Create a bar chart of the top five most common first words
+ggplot(top_df, aes(x = first_word_of_title)) +
+  geom_bar(fill = "skyblue") +
+  geom_text(stat = "count", aes(label = ..count..), vjust = -0.5) +
+  labs(x = "First Word of Title", y = "Frequency", 
+       title = "Figure 2: Top Five Most Common First Words of Book Titles") +
+  theme_light()
+```
+
+```{r av-ratings, warning = FALSE, message = FALSE, echo = FALSE}
+
+# Calculate the average book rating by genre
+avg_ratings <- aggregate(df$book_average_rating, by = list(df$genre_1), 
+                         FUN = mean)
+colnames(avg_ratings) <- c("Genre", "Average_Rating")
+
+# Sort the average ratings in descending order
+avg_ratings <- avg_ratings[order(avg_ratings$Average_Rating, 
+                                 decreasing = TRUE), ]
+
+# Select the top eight highest-rated genres
+top_genres <- avg_ratings$Genre[1:8]
+top_avg_ratings <- avg_ratings[avg_ratings$Genre %in% top_genres, ]
+
+# Create a bar chart of average book ratings for the top eight 
+# highest-rated genres
+ggplot(top_avg_ratings, aes(x = reorder(Genre, Average_Rating), 
+                            y = Average_Rating)) +
+  geom_bar(stat = "identity", fill = "skyblue") +
+  geom_text(aes(label = round(Average_Rating, 2)), 
+            vjust = -0.5, color = "black", size = 3) +
+  labs(x = "Genre", y = "Average Book Rating", 
+       title = "Figure 3: Average Book Ratings for Top Eight Highest-Rated Genres") +
+  theme_light()
+```
+
+```{r scatter1, warning = FALSE, message = FALSE, echo = FALSE}
+
+# Scatterplot: average_book_rating vs. words_in_title
+ggplot(df, aes(x = words_in_title, y = book_average_rating)) +
+  geom_point(color = "skyblue", fill = "skyblue") +
+  labs(x = "Words in Title", y = "Average Book Rating") +
+  ggtitle("Figure 4: Average Book Rating vs. Words in Title") +
+  theme_light()
+```
+
+```{r scatter2, warning = FALSE, message = FALSE, echo = FALSE}
+# Scatterplot: average_book_rating vs. book_title_length
+ggplot(df, aes(x = book_title_length, y = book_average_rating)) +
+  geom_point(color = "skyblue", fill = "skyblue") +
+  labs(x = "Book Title Length", y = "Average Book Rating") +
+  ggtitle("Figure 5: Average Book Rating vs. Book Title Length") +
+  theme_light()
+```
+
+```{r scatter3, warning = FALSE, message = FALSE, echo = FALSE}
+
+# Convert 'pages' to numeric and remove non-numeric values
+df$pages <- as.numeric(as.character(df$pages))
+df <- df[!is.na(df$pages), ]
+
+# Scatterplot: average_book_rating vs. pages
+ggplot(df, aes(x = pages, y = book_average_rating)) +
+  geom_point(color = "skyblue", fill = "skyblue") +
+  labs(x = "Number of Pages", y = "Average Book Rating") +
+  ggtitle("Figure 6: Average Book Rating vs. Number of Pages") +
+  scale_x_continuous(breaks = seq(0, max(df$pages), by = 500)) +
+  theme_light()
+```
+
+```{r box-plot, warning = FALSE, message = FALSE, echo = FALSE}
+
+# box plot of ratings by gener
+ggplot(df, aes(x = author_gender, y = book_average_rating)) +
+  geom_boxplot(fill = "skyblue", color = "black") +
+  labs(x = "Author Gender", y = "Book Rating", 
+       title = "Figure 7: Book Ratings by Author Gender") +
+  theme_light()
+```
+
+### Modeling
+
+```{r models, warning = FALSE, message = FALSE, echo = FALSE}
+# Linear regression model
+linear_model <- lm(book_average_rating ~ pages + book_title_length + 
+                     words_in_title, data = df)
+
+# Fit the ranger random forest model with importance option
+random_forest_model <- ranger(book_average_rating ~ pages + book_title_length + 
+                                words_in_title + author_gender + genre_1 + 
+                                genre_2 + first_word_of_title, data = df, 
+                              importance = "impurity")
+
+# Prediction using linear regression model
+linear_pred <- predict(linear_model, newdata = df)
+
+# Prediction using random forest model
+random_forest_pred <- predict(random_forest_model, data = df)$predictions
+
+# Calculate MSE and R-squared for linear regression model
+linear_mse <- mean((df$book_average_rating - linear_pred)^2)
+linear_r_squared <- summary(linear_model)$r.squared
+
+# Calculate MSE and R-squared for random forest model
+random_forest_mse <- mean((df$book_average_rating - random_forest_pred)^2)
+random_forest_r_squared <- random_forest_model$prediction.error
+```
+
+```{r results_table, warning = FALSE, message = FALSE, echo = FALSE}
+# Create a data frame with model names and evaluation metrics
+evaluation_table <- data.frame(
+  Model = c("Linear Regression", "Random Forest"),
+  MSE = c(linear_mse, random_forest_mse),
+  R_Squared = c(linear_r_squared, random_forest_r_squared)
+)
+
+# Highlight the lowest RMSE and highest R-squared values in red
+evaluation_table$MSE <- ifelse(evaluation_table$MSE 
+                                == min(evaluation_table$MSE), 
+                                sprintf("\\textcolor{red}{%.3f}", 
+                                        evaluation_table$MSE),
+                                sprintf("%.3f", evaluation_table$MSE))
+
+evaluation_table$R_Squared <- ifelse(evaluation_table$R_Squared 
+                                     == max(evaluation_table$R_Squared), 
+                                     sprintf("\\textcolor{red}{%.3f}", 
+                                             evaluation_table$R_Squared),
+                                  sprintf("%.3f", evaluation_table$R_Squared))
+
+# Set the column names
+colnames(evaluation_table) <- c("Model", "MSE", "R-squared")
+
+# Print the table using kable with LaTeX formatting
+kable(evaluation_table, format = "latex", booktabs = TRUE, escape = FALSE,
+      caption = "Model Evaluation Metrics") %>%
+  kable_styling()
+```
+
+```{r importance-table, warning = FALSE, message = FALSE, echo = FALSE}
+# Get feature importance using importance()
+importance_scores <- importance(random_forest_model)
+
+# Create a data frame with feature names and importance scores
+importance_table <- data.frame(Feature = names(importance_scores), 
+                               Importance = importance_scores, 
+                               row.names = NULL)
+
+# Capitalize new words and replace underscores with spaces in feature names
+importance_table$Feature <- gsub("_", " ", importance_table$Feature)
+importance_table$Feature <- tools::toTitleCase(importance_table$Feature)
+
+# highlight greatest score
+importance_table$Importance <- ifelse(importance_table$Importance
+                                == max(importance_table$Importance), 
+                                sprintf("\\textcolor{red}{%.3f}", 
+                                        importance_table$Importance),
+                                sprintf("%.3f", importance_table$Importance))
+
+# Set the column names
+colnames(importance_table) <- c("Feature", "Importance Score")
+
+# Print the table using kable with LaTeX formatting
+kable(importance_table, format = "latex", booktabs = TRUE, escape = FALSE,
+      caption = "Feature Importance Scores") %>%
+  kable_styling()
+```
+
+
+
+\newpage
+
+## Code Appendix
+
+```{r ref.label = knitr::all_labels(), echo = TRUE, eval = FALSE}
+```
