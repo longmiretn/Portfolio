@@ -13,21 +13,20 @@ To run the code in this repository, you will need the following packages:
 
 You can install these packages using pip:
 
-```bash
-pip install keras numpy matplotlib scipy
+`pip install keras numpy matplotlib scipy`
 
 ## Usage
 
 1. Clone the repository:
 
-git clone <repository_url>
-cd vae-mnist
+`git clone <repository_url>`
+`cd vae-mnist`
 
 2. Run the VAE model:
 
 The VAE model is implemented in the vae.py script. You can run it with the following command:
 
-python vae.py
+`python vae.py`
 
 The script will train the VAE on the MNIST dataset for 10 epochs and generate a grid of 15x15 hand-written digit images. The resulting images will be saved in the results/vae directory.
 

@@ -49,8 +49,3 @@ To reproduce the analysis, you can simply download the data.csv file and run the
 
 The dataset used for this analysis was sourced from Openpsychometrics.org, a nonprofit effort to educate the public about psychology and collect data for psychological research.
 
-## License
-
-This project is licensed under the MIT License. Feel free to use the code and data for your own analyses or projects.
-
-For questions or inquiries, please contact Your Name (your.email@example.com).

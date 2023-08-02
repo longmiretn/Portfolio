@@ -72,10 +72,3 @@ The results of the predictive models can be observed in the Jupyter Notebook. Mo
 
 Contributions are welcome! If you have any suggestions, improvements, or bug fixes, please feel free to open an issue or submit a pull request.
 
-## License
-
-This project is licensed under the MIT License.
-
-## Contact
-
-For any questions or inquiries, please contact your-name (mailto:your-email@example.com).

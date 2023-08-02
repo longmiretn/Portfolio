@@ -43,10 +43,3 @@ To reproduce the analysis and explore the findings, follow these steps:
 
 Please note that the analysis is based on the data available at the time of the study. For any questions or further inquiries, feel free to contact the author.
 
-## License
-
-This project is licensed under the MIT License. Feel free to use, modify, and distribute the code and findings, but kindly acknowledge the source.
-
-**Author**: [Your Name]
-
-**Contact**: [Your Email]

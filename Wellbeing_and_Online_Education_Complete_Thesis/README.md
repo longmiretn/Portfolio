@@ -46,16 +46,3 @@ The Citations and Appendix section contains references to the R packages used in
 - Navigate to the appropriate sections in the R Markdown file (`research_report.Rmd`) to view the analysis and code.
 - To generate the report in HTML or PDF format, knit the R Markdown file.
 
-## License
-
-This research report is licensed under the [MIT License](LICENSE). Feel free to use, modify, and distribute the content for non-commercial purposes while providing proper attribution.
-
-## Contributors
-
-- [Your Name](https://github.com/your-username)
-
-Feel free to contribute to the repository by opening pull requests for improvements or bug fixes.
-
----
-
-For questions or further information, please contact [your-email@example.com](mailto:your-email@example.com).
